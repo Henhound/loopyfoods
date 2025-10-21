@@ -1,0 +1,88 @@
+/* Make everything size nicely on phones */
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  background: #0b0c10;
+  color: #e6e6e6;
+}
+
+/* Mobile-first shell: center content, constrain width like a phone */
+.mobile-shell {
+  min-height: 100%;
+  max-width: 420px; /* typical phone width */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+/* Simple page layout */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: calc(100vh - 24px);
+}
+
+.page-header {
+  text-align: center;
+  font-weight: 800;
+  font-size: 28px;
+  padding: 16px 0 8px;
+  letter-spacing: 0.5px;
+}
+
+/* Center the main action for thumb reach */
+.page-body {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+/* Big tappable button */
+.primary-btn {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 14px 24px;
+  border-radius: 14px;
+  border: none;
+  background: #3ab0ff;
+  color: #0b0c10;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(58, 176, 255, 0.25);
+  transform: translateY(0);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
+}
+.primary-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px rgba(58, 176, 255, 0.2);
+}
+.secondary-btn {
+  font-size: 16px;
+  font-weight: 600;
+  padding: 12px 22px;
+  border-radius: 10px;
+  border: 2px solid #3ab0ff;
+  background: transparent;
+  color: #3ab0ff;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.secondary-btn:active {
+  opacity: 0.8;
+}
