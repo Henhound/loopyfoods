@@ -50,3 +50,39 @@ Players will start the battle with 0 points. Each player may have a different St
 The battle will start when the player enters the battle screen.
 
 When the battle starts, the first food card in each of the player's food loops will begin it's countdown. When it reaches it's countdown time, it will be activated and the game engine will move to the next food card in the player's food loop list. The next card will start its countdown and so on. When the final card in a player's list is activated, the enine will move to the first card in the player's list. The battle will continue looping until a player reaches their Star Point Target, or until the battle lasts 20 seconds. If the player reaches their Star Point Target before the opposing player, they win the battle and get a trophy. If they opposing player reaches their Star Point Target, the player loses the battle and loses a life. If the time runs out, the player with the most Star Points wins. If it is a tie, the player does not lose a life or gain a trophy.
+
+## 🧩 5. Project Folder Structure
+
+loopyfoods/
+├── .git/
+├── .gitattributes
+├── .gitignore
+├── .prettierignore
+├── .prettierrc
+├── .vscode/
+├── docs/
+├── eslint.config.js
+├── index.html
+├── node_modules/
+├── package-lock.json
+├── package.json
+├── public/
+├── README.md
+├── src/
+│ ├── app/
+│ │ ├── App.tsx
+│ │ └── screen.ts
+│ ├── assets/
+│ │ └── react.svg
+│ ├── screens/
+│ │ ├── MainMenu.tsx
+│ │ └── Shop.tsx
+│ ├── styles/
+│ │ └── globals.css
+│ ├── App.css
+│ ├── index.css
+│ └── main.tsx
+├── tsconfig.app.json
+├── tsconfig.json
+├── tsconfig.node.json
+└── vite.config.ts
