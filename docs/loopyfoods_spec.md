@@ -35,7 +35,7 @@ _(Single-Source-of-Truth for ChatGPT & Dev Notes)_
 
 ## 🧩 3. User Interface
 
-- **UI/UX Basics:** The whole game should be playable with a phone in vertical orientation. The app UI is to be "mobile-first". Cards will be shown as small square sprites. When you click them, a tool-tip window will show the cards information.
+- **UI/UX Basics:** The whole game should be playable with a phone in vertical orientation. The app UI is to be "mobile-first". Cards will be shown as small square sprites. When you click them, a tool-tip window will show the cards information. The app should not redirect to different URLs, it should be playable in one screen.
 
 - **Shop Screen** The shop screen will show the player's food loop list and the player's judge slots in the top half of the window. The bottom half of the window will have the food cards for sale and a separarte area for judge cards for sale. The player should be able to drag and drop items from the shop areas into the food loop area to purchase them. To sell items players should be able to drag and drop items from the food card or judge area into a designated sell location. The shop screen will also show game information like what round it is, lives, trophies, and player money.
 

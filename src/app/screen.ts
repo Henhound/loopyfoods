@@ -1,7 +1,10 @@
-// A tiny “router” enum so we can expand later (Battle, Results, etc.)
-export type Screen = 'MAIN_MENU' | 'SHOP'
+// src/app/screen.ts
 
+// Using a const object instead of an enum avoids isolatedModules/erasableSyntaxOnly issues
 export const SCREENS = {
-  MAIN_MENU: 'MAIN_MENU' as Screen,
-  SHOP: 'SHOP' as Screen,
-}
+  MAIN_MENU: 'MAIN_MENU',
+  SHOP: 'SHOP',
+} as const
+
+// Infer a union type from SCREENS
+export type Screen = (typeof SCREENS)[keyof typeof SCREENS]

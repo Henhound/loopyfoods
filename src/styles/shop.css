@@ -1,0 +1,164 @@
+:root {
+  --radius: 10px;
+  --gap: 8px;
+  --border: 1px solid #cfcfcf;
+  --bg: #f5f5f5;
+  --panel: #ffffff;
+
+  --judges: #f6d8d8;
+  --shop: #e3e6ea;
+  --loop: #d5e4ff;
+
+  --text: #222;
+}
+
+/* Page scaffold */
+.shop {
+  height: 100dvh; /* mobile-friendly viewport */
+  padding: 8px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  box-sizing: border-box;
+}
+
+/* Header stats bar */
+.header {
+  background: #e9e9e9;
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 10px;
+  font-size: 0.9rem;
+}
+
+/* Main content area: two columns on phones */
+.main {
+  flex: 1;
+  min-height: 0; /* allow children to scroll */
+  display: grid;
+  grid-template-columns: 1fr 110px; /* left grows, right fixed */
+  gap: var(--gap);
+  overflow: hidden;
+}
+
+/* Panels */
+.panel {
+  background: var(--panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+.panelTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Left column wrapper */
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+/* Judges panel look */
+.judgesPanel {
+  background: var(--judges);
+}
+
+/* Shop panel look */
+.shopPanel {
+  background: var(--shop);
+}
+
+/* Food Loop panel look */
+.loopPanel {
+  background: var(--loop);
+  align-items: center;
+}
+
+/* Slots */
+.slot {
+  background: #fff;
+  border: var(--border);
+  border-radius: 8px;
+  flex: 0 0 auto;
+}
+
+/* Slot groupings */
+.rowSlots {
+  display: flex;
+  gap: var(--gap);
+}
+.colSlots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* Sub-panels inside the Shop */
+.subPanel {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.subTitle {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Buttons */
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.btn.primary {
+  background: #2a7be4;
+  color: white;
+}
+.btn.danger {
+  background: #d9534f;
+  color: white;
+}
+
+/* Scrollable Food Loop column */
+.loopScroll {
+  width: 100%;
+  overflow-y: auto;
+  padding-right: 4px; /* breathing room next to scrollbar */
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* Slightly nicer scroll on mobile */
+.loopScroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive enhancement for wider screens */
+@media (min-width: 600px) {
+  .header {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .main {
+    grid-template-columns: 1fr 140px;
+  }
+}
