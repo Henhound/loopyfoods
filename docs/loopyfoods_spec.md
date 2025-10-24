@@ -1,4 +1,4 @@
-# LoopyFoods — Autobattler Prototype Specification
+# LoopyFoods - Autobattler Prototype Specification
 
 _(Single source of truth for ChatGPT & dev notes)_
 
@@ -6,8 +6,8 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 ## 0. TL;DR
 
-- Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: cooking competition.
-- Core loop: Shop → Arrange → Battle → Repeat.
+- Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: school cafeteria lunch time. Judges are school kids (still called "Judges").
+- Core loop: Shop + Arrange + Battle + Repeat.
 - Goal: Playable prototype to validate fun before backend work.
 - Tech stack: React + TypeScript + Vite + DnD-Kit (frontend only).
 - Out of scope (for now): Firebase, accounts, leaderboards, persistence. Opposing players are placeholders for the prototype.
@@ -16,22 +16,24 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 ## 1. Game Flow
 
-1. Main Menu — shows a “Play” button.
-2. Shop Screen — player can buy/sell food cards and judge cards, and rearrange the Food Loop. Higher‑tier cards unlock as rounds progress.
-3. Battle Screen — player is paired with an opponent; the battle plays out automatically. First to hit their Star Point target wins.
-4. Results — show win/loss/draw, then return to Shop for the next round.
-5. Game End — player starts with 5 lives. Wins grant a trophy; losses cost a life. Reach 10 trophies to win; lose 5 lives to lose the game.
+1. Main Menu - shows a "Play" button.
+2. Shop Screen - player can buy/sell food cards and judge cards, and arrange the Food Loop Tray. Higher-tier cards unlock as rounds progress.
+3. Battle Screen - player is paired with an opponent; the battle plays out automatically. First to hit their Star Point Target wins.
+4. Results - show win/loss/draw, then return to Shop for the next round.
+5. Game End - player starts with 5 lives. Wins grant a trophy; losses cost a life. Reach 10 trophies to win; lose 5 lives to lose the game.
 
 ---
 
 ## 2. Game Overview
 
-- Food Card: Has a shop cost, cooldown, category tags, tier, and abilities.
-- Food Loop: Player arranges a list of food cards that activate sequentially in a loop during battle. After each full loop, judge cards activate.
+- Food Card: Has a shop cost, charge time, category tags, tier, and abilities.
+- Food Loop Tray: Player arranges an ordered sequence of food cards that activate sequentially in a loop during battle. The loop is themed as a cafeteria tray with numbered compartments indicating activation order. Starts with 5 compartments; can be upgraded via an "Upgrade Tray" button in the shop up to a maximum of 9 compartments.
 - Card Categories: Used for certain abilities (e.g., Mexican, Asian, Italian, Fast Food, Delicacy).
-- Types of Points: Abilities generate points (e.g., Savory). Certain effects convert points into Star Points.
-- Abilities: Two types — basic (activate on cooldown, e.g., “+5 Savory Points”) and triggered (activate on a trigger, e.g., “Whenever a Mexican Food Card is activated, give +1 Savory Points”).
-- Judges: Separate card type placed into Judge slots. Judges convert other points into Star Points. Some have cooldowns; some are triggered. They activate separately from the Food Loop.
+- Types of Points: Abilities generate various points (e.g., Savory). Certain effects convert points into Star Points.
+- Abilities: Two types
+  - Basic: activate when the card's turn in the loop reaches its charge time (e.g., "+5 Savory Points").
+  - Triggered: activate on a trigger (e.g., "Whenever a Mexican Food Card activates, gain +1 Savory Points").
+- Judges: Separate card type placed into Judge slots (fixed at 3 slots). Judges convert other points into Star Points and/or modify targets. Judges can have charge times or triggers and may activate at different times, not only at loop end.
 
 ---
 
@@ -39,22 +41,49 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 - Mobile-first: Playable one-screen experience in vertical orientation. No URL routing required.
 - Cards: Small square sprites; tapping opens a tooltip with details.
-- Shop Screen: Top half shows player’s Food Loop and Judge slots. Bottom half shows Food Cards for sale and Judge Cards for sale. Drag from shop areas into Food Loop to purchase; drag to a designated sell area to sell. Shows gold, round, lives/health, trophies.
-- Battle Screen: Opponent on top, player on bottom. Shows Food Loops and Judges for both. Indicators highlight activations and cooldowns. Displays point totals for all types and each player’s Star Point Target.
+- Shop Screen: Top half shows the player's Food Loop Tray (numbered compartments) and 3 Judge slots. Bottom half shows the shops: Food Shop (5 cards visible) and Judge Shop (2 cards visible).
+  - Purchase: Drag from a shop into the Tray or Judge slots to buy.
+  - Sell: Drag a card to a designated sell area to sell.
+  - Buttons and indicators:
+    - Gold, round, lives, trophies.
+    - Reroll: rerolls both shops. Cost starts at $1 each shop phase and increases by +$1 per subsequent reroll during that phase; resets to $1 after each battle. Players can freeze individual shop items to prevent them from rerolling; frozen items persist across rerolls and between battles until purchased or unfrozen (like Super Auto Pets).
+    - Upgrade Tray: spend gold to increase tray compartments by 1, up to 9. Exact cost TBD via playtesting.
+- Battle Screen: Opponent on top, player on bottom. Shows Food Loop Trays and Judges for both. Indicators highlight activations and charge progress. Displays point totals for all types and each player's Star Point Target.
 
 ---
 
 ## 4. Battle Logic
 
 - Battles auto-play on entering the Battle screen; player cannot interact or rearrange during battle.
-- Both players start at 0 points; targets may differ.
-- Flow: First Food Card in each player’s loop begins its countdown. On reaching cooldown, it activates; then proceed to the next card. After the final card, loop back to the first. After each full Food Loop, Judges activate. Continue until:
-  - A player reaches their Star Point Target (that player wins), or
-  - 20 seconds elapse: highest Star Points wins; ties result in no trophy gained and no life lost.
+- Points and targets: Both players start at 0 points. The base Star Point Target is 100 for all players. Certain effects from cards or judges can lower a player's target or raise an opponent's target.
+- Food Loop sequencing:
+  - Exactly one food card charges at a time, in compartment order.
+  - Card 1 charges until it reaches its charge time, then activates. Then Card 2 begins charging and activates, and so on. After the final card, loop back to Card 1 and repeat.
+- Judges:
+  - Judges may activate on their own charge times or triggers (e.g., after a food activation, on point thresholds, periodically). They do not only activate at loop end.
+- Win/timeout conditions:
+  - A player wins immediately upon reaching or exceeding their current Star Point Target.
+  - If 20 seconds elapse: highest Star Points wins; ties result in no trophy gained and no life lost.
 
 ---
 
-## 5. Project Folder Structure
+## 5. Economy and Shops
+
+- Starting gold: Player receives $10 at the beginning of every shop phase (round). Unspent gold carries over after a battle.
+- Prices (initial, subject to playtesting):
+  - Food cards: start at $3 at low tiers; higher-tier foods may cost more.
+  - Judges: TBD via playtesting.
+  - Upgrade Tray: TBD via playtesting.
+  - Sell value: TBD via playtesting (e.g., half of purchase cost rounded down).
+- Shop details:
+  - Food Shop shows 5 food cards at a time.
+  - Judge Shop shows 2 judges at a time.
+  - Reroll affects both shops together and follows the increasing cost rule described above.
+  - Freeze works like Super Auto Pets and persists across battles until the item is purchased or unfrozen.
+
+---
+
+## 6. Project Folder Structure
 
 ```
 loopyfoods/
@@ -93,4 +122,3 @@ loopyfoods/
   tsconfig.node.json
   vite.config.ts
 ```
-

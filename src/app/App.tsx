@@ -5,6 +5,8 @@ import Shop from '../screens/Shop'
 import { SCREENS } from './screen'
 import type { Screen } from './screen'
 
+//To run the app: npm run dev:lan
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>(SCREENS.MAIN_MENU)
 
