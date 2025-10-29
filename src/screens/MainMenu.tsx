@@ -1,11 +1,13 @@
 // src/screens/MainMenu.tsx
-type Props = { onStart: () => void }
+import { useNavigation } from '../app/navigation'
+import { SCREENS } from '../app/screen'
 
-export default function MainMenu({ onStart }: Props) {
+export default function MainMenu() {
+  const { navigate } = useNavigation()
   return (
     <div style={{ height: '100dvh', display: 'grid', placeItems: 'center' }}>
       <button
-        onClick={onStart}
+        onClick={() => navigate(SCREENS.SHOP)}
         style={{
           padding: '14px 18px',
           fontWeight: 700,

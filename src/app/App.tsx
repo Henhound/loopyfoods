@@ -1,22 +1,28 @@
-import { useState, useCallback } from 'react'
-
 import MainMenu from '../screens/MainMenu'
 import Shop from '../screens/Shop'
 import { SCREENS } from './screen'
-import type { Screen } from './screen'
+import { NavigationProvider, useNavigation } from './navigation'
 
 //To run the app: npm run dev:lan
 
+function Screens() {
+  const { screen } = useNavigation()
+  switch (screen) {
+    case SCREENS.MAIN_MENU:
+      return <MainMenu />
+    case SCREENS.SHOP:
+      return <Shop />
+    default:
+      return null
+  }
+}
+
 export default function App() {
-  const [screen, setScreen] = useState<Screen>(SCREENS.MAIN_MENU)
-
-  const goToShop = useCallback(() => setScreen(SCREENS.SHOP), [])
-  const goToMenu = useCallback(() => setScreen(SCREENS.MAIN_MENU), [])
-
   return (
-    <div className="mobile-shell">
-      {screen === SCREENS.MAIN_MENU && <MainMenu onStart={goToShop} />}
-      {screen === SCREENS.SHOP && <Shop onBack={goToMenu} />}
-    </div>
+    <NavigationProvider>
+      <div className="mobile-shell">
+        <Screens />
+      </div>
+    </NavigationProvider>
   )
 }

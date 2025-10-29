@@ -9,7 +9,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 - Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: school cafeteria lunch time. Judges are school kids (still called "Judges").
 - Core loop: Shop + Arrange + Battle + Repeat.
 - Goal: Playable prototype to validate fun before backend work.
-- Tech stack: React + TypeScript + Vite + DnD-Kit (frontend only).
+- Tech stack: React + TypeScript + Vite (frontend only). Selection-based interactions; no drag-and-drop. In-memory navigation (NavigationProvider); no URL routing.
 - Out of scope (for now): Firebase, accounts, leaderboards, persistence. Opposing players are placeholders for the prototype.
 
 ---
@@ -39,14 +39,22 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 ## 3. User Interface
 
-- Mobile-first: Playable one-screen experience in vertical orientation. No URL routing required.
-- Cards: Small square sprites; tapping opens a tooltip with details.
-- Shop Screen: Top half shows the player's Food Loop Tray (numbered compartments) and 3 Judge slots. Bottom half shows the shops: Food Shop (5 cards visible) and Judge Shop (2 cards visible).
-  - Purchase: Drag from a shop into the Tray or Judge slots to buy.
-  - Sell: Drag a card to a designated sell area to sell.
+ - Mobile-first: Playable one-screen experience in vertical orientation. No URL routing required.
+ - Navigation: In-memory stack via a NavigationProvider with helpers `navigate`, `replace`, `back`, and `reset`. No URLs or browser history; mobile-app style navigation.
+- Cards: Small square sprites; tap/click to select. Selected items are highlighted and their details appear in the Selection Info Zone.
+- Shop Screen: Top half shows the player's Food Loop Tray (numbered compartments) and 3 Judge slots. Bottom half shows the shops: Food Shop (5 cards visible) and Judge Shop (2 cards visible). The Storage view (6 slots) replaces the shop lists when toggled.
+  - Selection-based actions (no drag-and-drop):
+    - Move/swap: Select a source card (Shop, Tray, Storage, Judge, or Judge Shop), then click a destination slot to place. If the destination is occupied, the two cards swap.
+    - Buy to Tray/Judges: Select a shop card, then click a Tray compartment or Judge slot. Deduct gold if affordable; otherwise, show an error and do nothing.
+    - Buy to Storage (auto-place): Select a shop card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot and gold is deducted; if full, show an error and abort purchase.
+    - Tray → Storage (auto-place): Select a Tray card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot; if full, show an error and abort move.
+    - Storage → Tray: Click the Storage button to show Storage. Select a Storage item, then click a Tray slot to place. If occupied, swap.
+    - Sell: Select a Tray or Storage item and click the Sell button to sell it for the current sell value.
+  - Selection Info Zone: A panel on the Shop screen that displays the selected item’s full details (stats, abilities, cost, tags, tier; judge abilities for judges). Blank when nothing is selected.
   - Buttons and indicators:
     - Gold, round, lives, trophies.
-    - Reroll: rerolls both shops. Cost starts at $1 each shop phase and increases by +$1 per subsequent reroll during that phase; resets to $1 after each battle. Players can freeze individual shop items to prevent them from rerolling; frozen items persist across rerolls and between battles until purchased or unfrozen (like Super Auto Pets).
+    - Reroll: rerolls both shops. Cost starts at $1 each shop phase and increases by +$1 per subsequent reroll during that phase; resets to $1 after each battle.
+    - Storage: toggles the Storage view. When active, the shop lists are hidden and a 6-slot Storage grid is shown. Items in Storage persist between battles but have no effect during battles.
     - Upgrade Tray: spend gold to increase tray compartments by 1, up to 9. Exact cost TBD via playtesting.
 - Battle Screen: Opponent on top, player on bottom. Shows Food Loop Trays and Judges for both. Indicators highlight activations and charge progress. Displays point totals for all types and each player's Star Point Target.
 
@@ -79,7 +87,13 @@ _(Single source of truth for ChatGPT & dev notes)_
   - Food Shop shows 5 food cards at a time.
   - Judge Shop shows 2 judges at a time.
   - Reroll affects both shops together and follows the increasing cost rule described above.
-  - Freeze works like Super Auto Pets and persists across battles until the item is purchased or unfrozen.
+  - Storage system:
+    - 6-slot Storage accessible via the Storage button on the Shop screen.
+    - Items in Storage persist between battles, have no effect during battles, and do not trigger abilities.
+    - Buy into Storage (auto-place): select a shop card, then click the Storage button. If a slot is available, the item is placed in the next available slot and gold is deducted; if full, show an error and abort.
+    - Tray → Storage (auto-place): select a Tray card, then click the Storage button to place it in the next available Storage slot if any; abort if full.
+    - Storage → Tray: with Storage visible, select a Storage item and click a Tray slot to move or swap.
+    - Sell from Storage or Tray: select an item and click Sell to receive the sell value (TBD).
 
 ---
 
@@ -106,6 +120,7 @@ loopyfoods/
     app/
       App.tsx
       screen.ts
+      navigation.tsx
     assets/
       react.svg
     screens/

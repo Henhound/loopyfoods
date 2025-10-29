@@ -1,19 +1,19 @@
 import React from 'react'
 import '../styles/shop.css'
-import { useNavigation } from '../app/navigation'
 
 const SquareSlot: React.FC<{ size?: number }> = ({ size = 56 }) => (
   <div className="slot" style={{ width: size, height: size }} />
 )
 
-export default function Shop() {
-  const { back } = useNavigation()
+type Props = { onBack: () => void }
+
+export default function Shop({ onBack }: Props) {
   return (
     <div className="shop">
       {/* Tiny top bar with Back */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <button onClick={back} className="btn" style={{ background: '#777', color: '#fff' }}>
-          Back to Menu
+        <button onClick={onBack} className="btn" style={{ background: '#777', color: '#fff' }}>
+          ← Back to Menu
         </button>
       </div>
 
