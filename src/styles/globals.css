@@ -21,7 +21,8 @@ body {
 /* Mobile-first shell: center content, constrain width like a phone */
 .mobile-shell {
   min-height: 100%;
-  max-width: 420px; /* typical phone width */
+  max-width: 480px; /* slimmer side borders on wide phones */
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

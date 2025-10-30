@@ -41,22 +41,23 @@ _(Single source of truth for ChatGPT & dev notes)_
 
  - Mobile-first: Playable one-screen experience in vertical orientation. No URL routing required.
  - Navigation: In-memory stack via a NavigationProvider with helpers `navigate`, `replace`, `back`, and `reset`. No URLs or browser history; mobile-app style navigation.
-- Cards: Small square sprites; tap/click to select. Selected items are highlighted and their details appear in the Selection Info Zone.
-- Shop Screen: Top half shows the player's Food Loop Tray (numbered compartments) and 3 Judge slots. Bottom half shows the shops: Food Shop (5 cards visible) and Judge Shop (2 cards visible). The Storage view (6 slots) replaces the shop lists when toggled.
-  - Selection-based actions (no drag-and-drop):
-    - Move/swap: Select a source card (Shop, Tray, Storage, Judge, or Judge Shop), then click a destination slot to place. If the destination is occupied, the two cards swap.
-    - Buy to Tray/Judges: Select a shop card, then click a Tray compartment or Judge slot. Deduct gold if affordable; otherwise, show an error and do nothing.
-    - Buy to Storage (auto-place): Select a shop card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot and gold is deducted; if full, show an error and abort purchase.
-    - Tray → Storage (auto-place): Select a Tray card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot; if full, show an error and abort move.
-    - Storage → Tray: Click the Storage button to show Storage. Select a Storage item, then click a Tray slot to place. If occupied, swap.
-    - Sell: Select a Tray or Storage item and click the Sell button to sell it for the current sell value.
-  - Selection Info Zone: A panel on the Shop screen that displays the selected item’s full details (stats, abilities, cost, tags, tier; judge abilities for judges). Blank when nothing is selected.
-  - Buttons and indicators:
-    - Gold, round, lives, trophies.
-    - Reroll: rerolls both shops. Cost starts at $1 each shop phase and increases by +$1 per subsequent reroll during that phase; resets to $1 after each battle.
-    - Storage: toggles the Storage view. When active, the shop lists are hidden and a 6-slot Storage grid is shown. Items in Storage persist between battles but have no effect during battles.
-    - Upgrade Tray: spend gold to increase tray compartments by 1, up to 9. Exact cost TBD via playtesting.
-- Battle Screen: Opponent on top, player on bottom. Shows Food Loop Trays and Judges for both. Indicators highlight activations and charge progress. Displays point totals for all types and each player's Star Point Target.
+ - Cards: Small square sprites; tap/click to select. Selected items are highlighted and their details appear in contextual pop-ups (modal overlays); there is no fixed info panel.
+ - Shop Screen: Top half shows the player's Food Loop Tray (numbered compartments) and 3 Judge slots. Bottom half shows the shops: Food Shop (5 cards visible) and Judge Shop (2 cards visible). The Storage view (6 slots) replaces the shop lists when toggled.
+   - Selection-based actions (no drag-and-drop):
+     - Move/swap: Select a source card (Shop, Tray, Storage, Judge, or Judge Shop), then click a destination slot to place. If the destination is occupied, the two cards swap.
+     - Buy to Tray/Judges: Select a shop card, then click a Tray compartment or Judge slot. Deduct gold if affordable; otherwise, show an error and do nothing.
+     - Buy to Storage (auto-place): Select a shop card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot and gold is deducted; if full, show an error and abort purchase.
+     - Tray <-> Storage (auto-place): Select a Tray card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot; if full, show an error and abort move.
+     - Storage <-> Tray: Click the Storage button to show Storage. Select a Storage item, then click a Tray slot to place. If occupied, swap.
+     - Sell: Select a Tray or Storage item and click the Sell button to sell it for the current sell value.
+   - Card Info Pop-ups: The fixed Selection Info Zone panel is removed. When a card or slot is selected, show a pop-up with full details (stats, abilities, cost, tags, tier; judge abilities for judges). Pop-ups dismiss via backdrop tap, a close control, or navigation back.
+   - Food Loop Tray UI: The tray renders inside a fixed aspect-ratio viewport that scales to available space to avoid clipping; compartments are laid out as a responsive 3x2 grid (four square slots and one rectangular slot spanning two columns).
+   - Buttons and indicators:
+     - Gold, round, lives, trophies.
+     - Reroll: rerolls both shops. Cost starts at $1 each shop phase and increases by +$1 per subsequent reroll during that phase; resets to $1 after each battle.
+     - Storage: toggles the Storage view. When active, the shop lists are hidden and a 6-slot Storage grid is shown. Items in Storage persist between battles but have no effect during battles.
+     - Upgrade Tray: spend gold to increase tray compartments by 1, up to 9. Exact cost TBD via playtesting.
+ - Battle Screen: Opponent on top, player on bottom. Shows Food Loop Trays and Judges for both. Indicators highlight activations and charge progress. Displays point totals for all types and each player's Star Point Target.
 
 ---
 
@@ -91,8 +92,8 @@ _(Single source of truth for ChatGPT & dev notes)_
     - 6-slot Storage accessible via the Storage button on the Shop screen.
     - Items in Storage persist between battles, have no effect during battles, and do not trigger abilities.
     - Buy into Storage (auto-place): select a shop card, then click the Storage button. If a slot is available, the item is placed in the next available slot and gold is deducted; if full, show an error and abort.
-    - Tray → Storage (auto-place): select a Tray card, then click the Storage button to place it in the next available Storage slot if any; abort if full.
-    - Storage → Tray: with Storage visible, select a Storage item and click a Tray slot to move or swap.
+    - Tray <-> Storage (auto-place): select a Tray card, then click the Storage button to place it in the next available Storage slot if any; abort if full.
+    - Storage <-> Tray: with Storage visible, select a Storage item and click a Tray slot to move or swap.
     - Sell from Storage or Tray: select an item and click Sell to receive the sell value (TBD).
 
 ---
@@ -137,3 +138,4 @@ loopyfoods/
   tsconfig.node.json
   vite.config.ts
 ```
+
