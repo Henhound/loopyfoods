@@ -108,6 +108,7 @@ function DraggableCard({
       aria-label={card.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
+      data-selectable="true"
       data-drag-id={id}
     >
       {card.title}
@@ -182,6 +183,7 @@ function TrayItem({
       aria-label={card.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
+      data-selectable="true"
       data-drag-id={`tray-item-${index}`}
     >
       {card.title}
@@ -237,6 +239,7 @@ function DraggableJudge({
       aria-label={judge.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
+      data-selectable="true"
       data-drag-id={id}
     >
       <span aria-hidden="true">{judge.emoji}</span>
@@ -290,6 +293,7 @@ function JudgeItem({
       aria-label={judge.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
+      data-selectable="true"
       data-drag-id={`judge-item-${index}`}
     >
       <span aria-hidden="true">{judge.emoji}</span>
@@ -346,6 +350,21 @@ export default function Shop() {
   const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
   const [selectedJudgeShopIndex, setSelectedJudgeShopIndex] = React.useState<number | null>(null)
   const [selectedJudgeIndex, setSelectedJudgeIndex] = React.useState<number | null>(null)
+
+  // Ensure only one thing is selected at a time across all areas
+  type Selection =
+    | { type: 'shop'; index: number }
+    | { type: 'tray'; index: number }
+    | { type: 'judge-shop'; index: number }
+    | { type: 'judge'; index: number }
+    | null
+
+  const setSelection = React.useCallback((sel: Selection) => {
+    setSelectedShopIndex(sel?.type === 'shop' ? sel.index : null)
+    setSelectedTrayIndex(sel?.type === 'tray' ? sel.index : null)
+    setSelectedJudgeShopIndex(sel?.type === 'judge-shop' ? sel.index : null)
+    setSelectedJudgeIndex(sel?.type === 'judge' ? sel.index : null)
+  }, [])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
@@ -496,6 +515,34 @@ export default function Shop() {
     resetActive()
   }
 
+  const handleSell = () => {
+    if (selectedTrayIndex != null) {
+      setTray(prev => {
+        const next = [...prev]
+        next[selectedTrayIndex] = null
+        return next
+      })
+      setSelectedTrayIndex(null)
+      return
+    }
+    if (selectedJudgeIndex != null) {
+      setJudges(prev => {
+        const next = [...prev]
+        next[selectedJudgeIndex] = null
+        return next
+      })
+      setSelectedJudgeIndex(null)
+      return
+    }
+  }
+
+  const handleBackgroundMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    // Ignore clicks on selectable items or their popovers
+    if (target.closest('[data-selectable="true"], .cardPopover')) return
+    setSelection(null)
+  }
+
   function CardPopover({
     item,
     onClose,
@@ -570,7 +617,7 @@ export default function Shop() {
       onDragEnd={handleAnyDragEnd}
       onDragCancel={resetActive}
     >
-      <div className="shop">
+      <div className="shop" onMouseDown={handleBackgroundMouseDown}>
         <div className="topbar">
           <button onClick={back} className="btn ghost">Back</button>
           <div className="miniStats" aria-label="session stats">
@@ -591,16 +638,18 @@ export default function Shop() {
                 <JudgeSlot index={idx} key={idx}>
                   {j && (
                     <div className="trayCardWrap">
-                      <JudgeItem
-                        index={idx}
-                        judge={j}
-                        hide={activeId === `judge-item-${idx}`}
-                        selected={selectedJudgeIndex === i}
-                        onClick={() => setSelectedJudgeIndex(s => (s === i ? null : i))}
-                      />
-                      {selectedJudgeIndex === i ? (
-                        <CardPopover item={j} onClose={() => setSelectedJudgeIndex(null)} />
-                      ) : null}
+                        <JudgeItem
+                          index={idx}
+                          judge={j}
+                          hide={activeId === `judge-item-${idx}`}
+                          selected={selectedJudgeIndex === i}
+                          onClick={() =>
+                            setSelection(selectedJudgeIndex === i ? null : { type: 'judge', index: i })
+                          }
+                        />
+                        {selectedJudgeIndex === i ? (
+                          <CardPopover item={j} onClose={() => setSelectedJudgeIndex(null)} />
+                        ) : null}
                     </div>
                   )}
                 </JudgeSlot>
@@ -622,16 +671,20 @@ export default function Shop() {
                       <TraySlot index={idx} key={idx}>
                         {item && (
                           <div className="trayCardWrap">
-                            <TrayItem
-                              index={idx}
-                              card={item}
-                              hide={activeId === `tray-item-${idx}`}
-                              selected={selectedTrayIndex === i}
-                              onClick={() => setSelectedTrayIndex(s => (s === i ? null : i))}
-                            />
-                            {selectedTrayIndex === i ? (
-                              <CardPopover item={item} onClose={() => setSelectedTrayIndex(null)} />
-                            ) : null}
+                              <TrayItem
+                                index={idx}
+                                card={item}
+                                hide={activeId === `tray-item-${idx}`}
+                                selected={selectedTrayIndex === i}
+                                onClick={() =>
+                                  setSelection(
+                                    selectedTrayIndex === i ? null : { type: 'tray', index: i },
+                                  )
+                                }
+                              />
+                              {selectedTrayIndex === i ? (
+                                <CardPopover item={item} onClose={() => setSelectedTrayIndex(null)} />
+                              ) : null}
                           </div>
                         )}
                       </TraySlot>
@@ -653,17 +706,19 @@ export default function Shop() {
                   const selected = selectedJudgeShopIndex === i
                   return (
                     <div key={id} className="shopCardWrap">
-                      <DraggableJudge
-                        id={id}
-                        judge={j}
-                        source={{ type: 'judge-shop', index: i }}
-                        hide={activeId === id}
-                        selected={selected}
-                        onClick={() => setSelectedJudgeShopIndex(s => (s === i ? null : i))}
-                      />
-                      {selected ? (
-                        <CardPopover item={j} onClose={() => setSelectedJudgeShopIndex(null)} />
-                      ) : null}
+                        <DraggableJudge
+                          id={id}
+                          judge={j}
+                          source={{ type: 'judge-shop', index: i }}
+                          hide={activeId === id}
+                          selected={selected}
+                          onClick={() =>
+                            setSelection(selected ? null : { type: 'judge-shop', index: i })
+                          }
+                        />
+                        {selected ? (
+                          <CardPopover item={j} onClose={() => setSelectedJudgeShopIndex(null)} />
+                        ) : null}
                     </div>
                   )
                 })}
@@ -692,17 +747,17 @@ export default function Shop() {
                 const selected = selectedShopIndex === i
                 return (
                   <div key={id} className="shopCardWrap">
-                    <DraggableCard
-                      id={id}
-                      card={card}
-                      source={{ type: 'shop', index: i }}
-                      hide={activeId === id}
-                      selected={selected}
-                      onClick={() => setSelectedShopIndex(s => (s === i ? null : i))}
-                    />
-                    {selected ? (
-                      <CardPopover item={card} onClose={() => setSelectedShopIndex(null)} />
-                    ) : null}
+                      <DraggableCard
+                        id={id}
+                        card={card}
+                        source={{ type: 'shop', index: i }}
+                        hide={activeId === id}
+                        selected={selected}
+                        onClick={() => setSelection(selected ? null : { type: 'shop', index: i })}
+                      />
+                      {selected ? (
+                        <CardPopover item={card} onClose={() => setSelectedShopIndex(null)} />
+                      ) : null}
                   </div>
                 )
               })}
@@ -710,11 +765,17 @@ export default function Shop() {
           </div>
         </section>
 
-        <section className="bottomBar">
-          <button className="btn cta">Lunch Time</button>
-          <button className="btn ghost">Sell</button>
-          <button className="btn ghost">Storage</button>
-        </section>
+          <section className="bottomBar">
+            <button className="btn cta">Lunch Time</button>
+            <button
+              className="btn ghost"
+              disabled={selectedTrayIndex == null && selectedJudgeIndex == null}
+              onClick={handleSell}
+            >
+              Sell
+            </button>
+            <button className="btn ghost">Storage</button>
+          </section>
       </div>
 
       <DragOverlay
