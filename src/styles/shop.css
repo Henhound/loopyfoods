@@ -161,7 +161,7 @@
   align-items: stretch;
   gap: var(--gap);
 }
-.judgeShopBox { width: max-content; }
+.judgeShopBox { width: max-content; min-width: calc(2 * var(--slot-s) + var(--gap) + 16px); }
 .actionsZone .actionsRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
 .shopsSection .row {
   display: grid;
@@ -179,6 +179,8 @@
   display: flex;
   gap: var(--gap);
   flex-wrap: nowrap;
+  min-height: var(--slot-s);
+  align-items: center;
 }
 
 /* Shop card selection + popover */
