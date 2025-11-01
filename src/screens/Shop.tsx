@@ -16,22 +16,14 @@ import { useNavigation } from '../app/navigation'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
 import { PLACEHOLDER_JUDGES, type PlaceholderJudge } from '../data/placeholder-judge-cards'
 
-/**
- * dnd-kit drag metadata for cards. We keep track of where a drag started
- * (shop or tray) so we can apply the correct logic on drop.
- */
-type DragCardSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
-type DragCardData = { kind: 'card'; card: PlaceholderCard; source?: DragCardSource }
-// Judge drag metadata parallels food cards
+type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragJudgeSource = { type: 'judge-shop'; index: number } | { type: 'judge'; index: number }
-type DragJudgeData = { kind: 'judge'; judge: PlaceholderJudge; source?: DragJudgeSource }
+type DragData =
+  | { kind: 'food'; card: PlaceholderCard; source?: DragFoodSource }
+  | { kind: 'judge'; judge: PlaceholderJudge; source?: DragJudgeSource }
+
 const TRAY_SIZE = 5 as const
 
-/**
- * A single droppable slot in the tray grid.
- * Index is 1-based in the UI to align with labels; we convert to 0-based
- * where needed when updating state.
- */
 function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
   const id = `tray-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -46,10 +38,19 @@ function TraySlot({ index, children }: { index: number; children?: React.ReactNo
   )
 }
 
-/**
- * Draggable representation of a shop card.
- * Pass `hide` to visually hide the origin while the overlay is dragging.
- */
+function JudgeSlot({ index, children }: { index: number; children?: React.ReactNode }) {
+  const id = `judge-${index}`
+  const { setNodeRef, isOver } = useDroppable({ id })
+  const style: React.CSSProperties = isOver
+    ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
+    : {}
+  return (
+    <div ref={setNodeRef} className="slot circle" data-index={index} style={style}>
+      {children}
+    </div>
+  )
+}
+
 function DraggableCard({
   id,
   card,
@@ -60,14 +61,14 @@ function DraggableCard({
 }: {
   id: string
   card: PlaceholderCard
-  source?: DragCardSource
+  source?: DragFoodSource
   hide?: boolean
   selected?: boolean
   onClick?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
-    data: { kind: 'card', card, source },
+    data: { kind: 'food', card, source },
   })
   const style: React.CSSProperties = {
     width: 'var(--slot-s)',
@@ -104,22 +105,6 @@ function DraggableCard({
   )
 }
 
-function JudgeSlot({ index, children }: { index: number; children?: React.ReactNode }) {
-  const id = `judge-${index}`
-  const { setNodeRef, isOver } = useDroppable({ id })
-  const style: React.CSSProperties = isOver
-    ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
-    : {}
-  return (
-    <div ref={setNodeRef} className="slot circle" data-index={index} style={style}>
-      {children}
-    </div>
-  )
-}
-
-/**
- * Visual used inside DragOverlay and to fill a tray slot.
- */
 function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fill' }) {
   const dim: React.CSSProperties =
     size === 'shop'
@@ -142,10 +127,6 @@ function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fi
   )
 }
 
-/**
- * Draggable item already placed in the tray grid.
- * The `hide` flag hides the original while it is being dragged so only the overlay is visible.
- */
 function TrayItem({
   index,
   card,
@@ -161,7 +142,7 @@ function TrayItem({
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `tray-item-${index}`,
-    data: { kind: 'card', card, source: { type: 'tray', index: index - 1 } },
+    data: { kind: 'food', card, source: { type: 'tray', index: index - 1 } },
   })
   const style: React.CSSProperties = {
     width: '100%',
@@ -306,69 +287,26 @@ function JudgeItem({
   )
 }
 
-// Judge shop/popover components
-function JudgePopover({
-  judge,
-  onClose,
-}: {
-  judge: PlaceholderJudge
-  onClose: () => void
-}) {
-  const ref = React.useRef<HTMLDivElement | null>(null)
-  React.useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const anchor = el.parentElement as HTMLElement | null
-    if (!anchor) return
-    const margin = 8
-    const place = () => {
-      const a = anchor.getBoundingClientRect()
-      const popW = el.offsetWidth
-      const popH = el.offsetHeight
-      let boundLeft = margin
-      let boundTop = margin
-      let boundRight = window.innerWidth - margin
-      let boundBottom = window.innerHeight - margin
-      const traySection = anchor.closest<HTMLElement>('.traySection')
-      if (traySection) {
-        const tr = traySection.getBoundingClientRect()
-        boundLeft = Math.max(boundLeft, tr.left + margin)
-        boundRight = Math.min(boundRight, tr.right - margin)
-        boundTop = Math.max(boundTop, tr.top + margin)
-        boundBottom = Math.min(boundBottom, tr.bottom - margin)
-      }
-      const spaceAbove = a.top - boundTop
-      const spaceBelow = boundBottom - a.bottom
-      const preferTop = spaceAbove >= popH || spaceAbove >= spaceBelow
-      const sideTop = preferTop
-      const desiredTop = sideTop ? a.top - popH - margin : a.bottom + margin
-      const desiredLeft = a.left + a.width / 2 - popW / 2
-      const topVp = Math.max(boundTop, Math.min(desiredTop, boundBottom - popH))
-      const leftVp = Math.max(boundLeft, Math.min(desiredLeft, boundRight - popW))
-      const relTop = topVp - a.top
-      const relLeft = leftVp - a.left
-      el.style.top = `${relTop}px`
-      el.style.left = `${relLeft}px`
-      el.style.bottom = 'auto'
-      el.style.transform = 'none'
-    }
-    place()
-    window.addEventListener('resize', place)
-    window.addEventListener('scroll', place)
-    return () => {
-      window.removeEventListener('resize', place)
-      window.removeEventListener('scroll', place)
-    }
-  }, [])
+function JudgePreview({ judge, size }: { judge: PlaceholderJudge; size: 'shop' | 'fill' }) {
+  const dim: React.CSSProperties =
+    size === 'shop'
+      ? { width: 'var(--slot-s)', height: 'var(--slot-s)' }
+      : { width: '100%', height: '100%' }
   return (
-    <div ref={ref} className="cardPopover" role="dialog" aria-label={`${judge.title} details`}>
-      <div className="cardPopoverHeader">
-        <strong className="cardTitle">{judge.title}</strong>
-        <button className="popoverClose" aria-label="Close" onClick={onClose}>
-          A-
-        </button>
-      </div>
-      <div className="cardPopoverBody">{judge.description}</div>
+    <div
+      style={{
+        ...dim,
+        borderRadius: 999,
+        background: '#fff',
+        border: '1px solid var(--border-color)',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: 700,
+        color: '#111',
+        fontSize: 24,
+      }}
+    >
+      <span aria-hidden="true">{judge.emoji}</span>
     </div>
   )
 }
@@ -380,6 +318,13 @@ export default function Shop() {
     Array.from({ length: TRAY_SIZE }, () => null),
   )
   const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(PLACEHOLDER_CARDS.slice(0, 5))
+  const [judges, setJudges] = React.useState<Array<PlaceholderJudge | null>>(
+    Array.from({ length: 3 }, () => null),
+  )
+  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(
+    PLACEHOLDER_JUDGES.slice(0, 2),
+  )
+
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeJudge, setActiveJudge] = React.useState<PlaceholderJudge | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
@@ -387,23 +332,11 @@ export default function Shop() {
   const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
   const [selectedShopIndex, setSelectedShopIndex] = React.useState<number | null>(null)
   const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
-  const [judges, setJudges] = React.useState<Array<PlaceholderJudge | null>>(
-    Array.from({ length: 3 }, () => null),
-  )
-  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(
-    PLACEHOLDER_JUDGES.slice(0, 2),
-  )
   const [selectedJudgeShopIndex, setSelectedJudgeShopIndex] = React.useState<number | null>(null)
   const [selectedJudgeIndex, setSelectedJudgeIndex] = React.useState<number | null>(null)
 
-  // Pointer-only sensor with small activation distance to prevent accidental drags.
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
-    }),
-  )
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
-  // Small helper to clear active drag state.
   const resetActive = () => {
     setActiveCard(null)
     setActiveJudge(null)
@@ -412,22 +345,19 @@ export default function Shop() {
     setActiveOffset(null)
   }
 
-  // Record which card/id is actively being dragged so we can render an overlay
-  // and optionally hide the original element during the drag.
   const handleDragStart = (e: DragStartEvent) => {
-    // Clear selection when a drag begins
     setSelectedShopIndex(null)
     setSelectedTrayIndex(null)
     setSelectedJudgeShopIndex(null)
     setSelectedJudgeIndex(null)
-    const data = e.active.data.current as DragCardData | undefined
-    if (data?.kind === 'card' && data.card) setActiveCard(data.card)
-    const jdata = e.active.data.current as DragJudgeData | undefined
-    if (jdata?.kind === 'judge' && jdata.judge) setActiveJudge(jdata.judge)
+
+    const data = e.active.data.current as DragData | undefined
+    if (data?.kind === 'food' && data.card) setActiveCard(data.card)
+    if (data?.kind === 'judge' && data.judge) setActiveJudge(data.judge)
+
     const id = String(e.active.id)
     setActiveId(id)
-    // Measure size for overlay. Special case: if dragging from tray slot 5 (rect),
-    // use the size of a square tray slot so the overlay isn't oversized.
+
     const el = document.querySelector<HTMLElement>(`[data-drag-id="${id}"]`)
     const rect = el?.getBoundingClientRect()
     if (!rect) {
@@ -436,18 +366,17 @@ export default function Shop() {
       return
     }
 
-    // Default overlay matches original size, no offset.
     let overlayW = rect.width
     let overlayH = rect.height
 
-    // Compute pointer position within original element at drag start.
-    const ev = (e as unknown as { activatorEvent?: Event }).activatorEvent
+    // pointer position within element
+    const ev = (e as any).activatorEvent as Event | undefined
     let clientX: number | null = null
     let clientY: number | null = null
     if (ev) {
       if (ev instanceof PointerEvent || ev instanceof MouseEvent) {
-        clientX = ev.clientX
-        clientY = ev.clientY
+        clientX = (ev as PointerEvent).clientX
+        clientY = (ev as PointerEvent).clientY
       } else if (typeof TouchEvent !== 'undefined' && ev instanceof TouchEvent) {
         if (ev.touches && ev.touches[0]) {
           clientX = ev.touches[0].clientX
@@ -459,17 +388,11 @@ export default function Shop() {
       }
     }
 
-    const rx =
-      clientX != null && rect.width > 0
-        ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-        : 0.5
-    const ry =
-      clientY != null && rect.height > 0
-        ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
-        : 0.5
+    const rx = clientX != null && rect.width > 0 ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0.5
+    const ry = clientY != null && rect.height > 0 ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)) : 0.5
 
-    // If dragging from tray slot 5, shrink overlay to square slot dimensions.
-    if (data?.source?.type === 'tray' && data.source.index === TRAY_SIZE - 1) {
+    // If dragging from tray slot 5, shrink overlay to square slot dimensions for food cards only.
+    if (data?.kind === 'food' && data.source?.type === 'tray' && data.source.index === TRAY_SIZE - 1) {
       const squareEl = document.querySelector<HTMLElement>('.trayGrid .slot.square')
       const r = squareEl?.getBoundingClientRect()
       if (r) {
@@ -478,32 +401,21 @@ export default function Shop() {
       }
     }
 
-    // Offset overlay so the pointer remains over the same relative point.
     const dx = rx * (rect.width - overlayW)
     const dy = ry * (rect.height - overlayH)
-
     setActiveSize({ width: overlayW, height: overlayH })
     setActiveOffset({ x: dx, y: dy })
   }
 
-  // On drop: accept shop->tray into empty slot; allow tray<->tray swap; ignore others.
-  const handleDragEnd = (e: DragEndEvent) => {
+  const handleFoodDragEnd = (e: DragEndEvent) => {
     const overId = e.over?.id ? String(e.over.id) : null
-    const data = e.active.data.current as DragCardData | undefined
-    const card = data?.card
+    const data = e.active.data.current as DragData | undefined
+    if (!overId || data?.kind !== 'food') return resetActive()
 
-    if (!card || !overId || !overId.startsWith('tray-')) {
-      resetActive()
-      return
-    }
+    const idx = Number(overId.split('-')[1]) - 1
+    if (!overId.startsWith('tray-') || Number.isNaN(idx) || idx < 0 || idx >= tray.length) return resetActive()
 
-    const idx = Number(overId.split('-')[1]) - 1 // zero-based
-    if (Number.isNaN(idx) || idx < 0 || idx >= tray.length) {
-      resetActive()
-      return
-    }
-
-    if (data?.source?.type === 'tray') {
+    if (data.source?.type === 'tray') {
       const from = data.source.index
       const to = idx
       if (from !== to && from >= 0 && from < tray.length && to >= 0 && to < tray.length) {
@@ -516,14 +428,13 @@ export default function Shop() {
         })
       }
     } else if (tray[idx] == null) {
-      // From shop -> tray only into empty slot
       setTray(prev => {
         if (prev[idx]) return prev
         const next = [...prev]
-        next[idx] = card
+        next[idx] = data.card
         return next
       })
-      if (data?.source?.type === 'shop') {
+      if (data.source?.type === 'shop') {
         setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
       }
     }
@@ -531,28 +442,15 @@ export default function Shop() {
     resetActive()
   }
 
-  const handleDragCancel = () => {
-    resetActive()
-  }
-
-  // Handle judge drops: shop -> judge slot (if empty) and judge <-> judge swap
   const handleJudgeDragEnd = (e: DragEndEvent) => {
     const overId = e.over?.id ? String(e.over.id) : null
-    const data = e.active.data.current as DragJudgeData | undefined
-    const judge = data?.judge
+    const data = e.active.data.current as DragData | undefined
+    if (!overId || data?.kind !== 'judge') return resetActive()
 
-    if (!judge || !overId || !overId.startsWith('judge-')) {
-      resetActive()
-      return
-    }
+    const idx = Number(overId.split('-')[1]) - 1
+    if (!overId.startsWith('judge-') || Number.isNaN(idx) || idx < 0 || idx >= judges.length) return resetActive()
 
-    const idx = Number(overId.split('-')[1]) - 1 // zero-based
-    if (Number.isNaN(idx) || idx < 0 || idx >= judges.length) {
-      resetActive()
-      return
-    }
-
-    if (data?.source?.type === 'judge') {
+    if (data.source?.type === 'judge') {
       const from = data.source.index
       const to = idx
       if (from !== to && from >= 0 && from < judges.length && to >= 0 && to < judges.length) {
@@ -568,10 +466,10 @@ export default function Shop() {
       setJudges(prev => {
         if (prev[idx]) return prev
         const next = [...prev]
-        next[idx] = judge
+        next[idx] = data.judge
         return next
       })
-      if (data?.source?.type === 'judge-shop') {
+      if (data.source?.type === 'judge-shop') {
         setJudgeShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
       }
     }
@@ -579,19 +477,18 @@ export default function Shop() {
     resetActive()
   }
 
-  // Dispatch to food or judge handler based on active data kind
   const handleAnyDragEnd = (e: DragEndEvent) => {
     const kind = (e.active.data.current as { kind?: string } | undefined)?.kind
-    if (kind === 'card') return handleDragEnd(e)
+    if (kind === 'food') return handleFoodDragEnd(e)
     if (kind === 'judge') return handleJudgeDragEnd(e)
     resetActive()
   }
 
   function CardPopover({
-    card,
+    item,
     onClose,
   }: {
-    card: PlaceholderCard
+    item: { title: string; description: string }
     onClose: () => void
   }) {
     const ref = React.useRef<HTMLDivElement | null>(null)
@@ -641,14 +538,14 @@ export default function Shop() {
       }
     }, [])
     return (
-      <div ref={ref} className="cardPopover" role="dialog" aria-label={`${card.title} details`}>
+      <div ref={ref} className="cardPopover" role="dialog" aria-label={`${item.title} details`}>
         <div className="cardPopoverHeader">
-          <strong className="cardTitle">{card.title}</strong>
+          <strong className="cardTitle">{item.title}</strong>
           <button className="popoverClose" aria-label="Close" onClick={onClose}>
-            ×
+            A-
           </button>
         </div>
-        <div className="cardPopoverBody">{card.description}</div>
+        <div className="cardPopoverBody">{item.description}</div>
       </div>
     )
   }
@@ -659,13 +556,11 @@ export default function Shop() {
       collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
       onDragEnd={handleAnyDragEnd}
-      onDragCancel={handleDragCancel}
+      onDragCancel={resetActive}
     >
       <div className="shop">
         <div className="topbar">
-          <button onClick={back} className="btn ghost">
-            Back
-          </button>
+          <button onClick={back} className="btn ghost">Back</button>
           <div className="miniStats" aria-label="session stats">
             <span title="Gold">Gold 10</span>
             <span title="Health">Health 2/5</span>
@@ -674,8 +569,6 @@ export default function Shop() {
             <span title="Star Target">Target 100</span>
           </div>
         </div>
-
-        {/* selection info removed for more space */}
 
         <section className="judgesSection">
           <div className="sectionLabel">Judges</div>
@@ -694,7 +587,7 @@ export default function Shop() {
                         onClick={() => setSelectedJudgeIndex(s => (s === i ? null : i))}
                       />
                       {selectedJudgeIndex === i ? (
-                        <JudgePopover judge={j} onClose={() => setSelectedJudgeIndex(null)} />
+                        <CardPopover item={j} onClose={() => setSelectedJudgeIndex(null)} />
                       ) : null}
                     </div>
                   )}
@@ -725,7 +618,7 @@ export default function Shop() {
                               onClick={() => setSelectedTrayIndex(s => (s === i ? null : i))}
                             />
                             {selectedTrayIndex === i ? (
-                              <CardPopover card={item} onClose={() => setSelectedTrayIndex(null)} />
+                              <CardPopover item={item} onClose={() => setSelectedTrayIndex(null)} />
                             ) : null}
                           </div>
                         )}
@@ -757,7 +650,7 @@ export default function Shop() {
                         onClick={() => setSelectedJudgeShopIndex(s => (s === i ? null : i))}
                       />
                       {selected ? (
-                        <JudgePopover judge={j} onClose={() => setSelectedJudgeShopIndex(null)} />
+                        <CardPopover item={j} onClose={() => setSelectedJudgeShopIndex(null)} />
                       ) : null}
                     </div>
                   )
@@ -788,7 +681,7 @@ export default function Shop() {
                       onClick={() => setSelectedShopIndex(s => (s === i ? null : i))}
                     />
                     {selected ? (
-                      <CardPopover card={card} onClose={() => setSelectedShopIndex(null)} />
+                      <CardPopover item={card} onClose={() => setSelectedShopIndex(null)} />
                     ) : null}
                   </div>
                 )
@@ -803,8 +696,7 @@ export default function Shop() {
           <button className="btn ghost">Storage</button>
         </section>
       </div>
-      {/* Disable default return animation to avoid snap-back on valid drops. */}
-      {/** Apply an offset when the overlay size differs (slot 5 case) to keep it under the pointer. */}
+
       <DragOverlay
         dropAnimation={null}
         modifiers={React.useMemo<Modifier[] | undefined>(() => {
@@ -824,36 +716,11 @@ export default function Shop() {
           </div>
         ) : activeJudge ? (
           <div style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}>
-            <div style={{ width: '100%', height: '100%' }}>
-              {/* Judge overlay preview */}
-              {(() => {
-                const dimStyle = activeSize ? { width: '100%', height: '100%' } : undefined
-                return (
-                  <div style={dimStyle}>
-                    {/* inline preview to avoid forward ref issues */}
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: 999,
-                        background: '#fff',
-                        border: '1px solid var(--border-color)',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontWeight: 700,
-                        color: '#111',
-                        fontSize: 24,
-                      }}
-                    >
-                      <span aria-hidden="true">{activeJudge.emoji}</span>
-                    </div>
-                  </div>
-                )
-              })()}
-            </div>
+            <JudgePreview judge={activeJudge} size={activeSize ? 'fill' : 'shop'} />
           </div>
         ) : null}
       </DragOverlay>
     </DndContext>
   )
 }
+
