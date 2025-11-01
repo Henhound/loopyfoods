@@ -9,7 +9,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 - Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: school cafeteria lunch time. Judges are school kids (still called "Judges").
 - Core loop: Shop + Arrange + Battle + Repeat.
 - Goal: Playable prototype to validate fun before backend work.
-- Tech stack: React + TypeScript + Vite (frontend only). Selection-based interactions; no drag-and-drop. In-memory navigation (NavigationProvider); no URL routing.
+- Tech stack: React + TypeScript + Vite (frontend only). Drag-and-drop in Shop via @dnd-kit; selection/click fallback optional. In-memory navigation (NavigationProvider); no URL routing.
 - Out of scope (for now): Firebase, accounts, leaderboards, persistence. Opposing players are placeholders for the prototype.
 
 ---
@@ -43,13 +43,17 @@ _(Single source of truth for ChatGPT & dev notes)_
  - Navigation: In-memory stack via a NavigationProvider with helpers `navigate`, `replace`, `back`, and `reset`. No URLs or browser history; mobile-app style navigation.
  - Cards: Small square sprites; tap/click to select. Selected items are highlighted and their details appear in contextual pop-ups (modal overlays); there is no fixed info panel.
  - Shop Screen: Top half shows the player's Food Loop Tray (numbered compartments) and 3 Judge slots. Bottom half shows the shops: Food Shop (5 cards visible) and Judge Shop (2 cards visible). The Storage view (6 slots) replaces the shop lists when toggled.
-   - Selection-based actions (no drag-and-drop):
-     - Move/swap: Select a source card (Shop, Tray, Storage, Judge, or Judge Shop), then click a destination slot to place. If the destination is occupied, the two cards swap.
-     - Buy to Tray/Judges: Select a shop card, then click a Tray compartment or Judge slot. Deduct gold if affordable; otherwise, show an error and do nothing.
-     - Buy to Storage (auto-place): Select a shop card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot and gold is deducted; if full, show an error and abort purchase.
-     - Tray <-> Storage (auto-place): Select a Tray card, then click the Storage button. If Storage has an empty slot, the item is placed in the next available slot; if full, show an error and abort move.
-     - Storage <-> Tray: Click the Storage button to show Storage. Select a Storage item, then click a Tray slot to place. If occupied, swap.
-     - Sell: Select a Tray or Storage item and click the Sell button to sell it for the current sell value.
+   - Interactions:
+     - Drag-and-drop (primary):
+       - Shop -> Tray: Drag a Food Shop card onto an empty Tray slot to buy/place it (deduct gold if affordable). Dropping onto an occupied Tray slot is ignored.
+       - Tray <-> Tray: Drag a Tray card onto any Tray slot to move it; dropping onto an occupied slot swaps the two cards.
+       - Judges & Storage: Dragging into Judge slots or to/from Storage is not yet implemented in the prototype.
+     - Selection-based fallback (secondary / planning):
+       - Buy to Storage (auto-place): Select a shop card, then click the Storage button. If Storage has an empty slot, place it in the next available slot and deduct gold; if full, show an error and abort purchase.
+       - Tray <-> Storage (auto-place): Select a Tray card, then click the Storage button to place it in the next available Storage slot if any; abort if full.
+       - Storage <-> Tray: With Storage visible, select a Storage item, then click a Tray slot to move or swap.
+       - Sell: Select a Tray or Storage item and click the Sell button to sell it for the current sell value.
+   - Drag-and-drop (dev notes): Pointer sensor with a small activation distance reduces accidental drags; tray slots are droppable targets. A drag overlay mirrors the card under the pointer, with size adjustments for the rectangular tray slot to keep visuals aligned; default return animation is disabled to avoid snap-back on valid drops.
    - Card Info Pop-ups: The fixed Selection Info Zone panel is removed. When a card or slot is selected, show a pop-up with full details (stats, abilities, cost, tags, tier; judge abilities for judges). Pop-ups dismiss via backdrop tap, a close control, or navigation back.
    - Food Loop Tray UI: The tray renders inside a fixed aspect-ratio viewport that scales to available space to avoid clipping; compartments are laid out as a responsive 3x2 grid (four square slots and one rectangular slot spanning two columns).
    - Buttons and indicators:
@@ -138,4 +142,3 @@ loopyfoods/
   tsconfig.node.json
   vite.config.ts
 ```
-
