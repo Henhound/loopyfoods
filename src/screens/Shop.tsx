@@ -14,10 +14,19 @@ import {
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/cards'
 
+/**
+ * dnd-kit drag metadata for cards. We keep track of where a drag started
+ * (shop or tray) so we can apply the correct logic on drop.
+ */
 type DragCardSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragCardData = { kind: 'card'; card: PlaceholderCard; source?: DragCardSource }
 const TRAY_SIZE = 5 as const
 
+/**
+ * A single droppable slot in the tray grid.
+ * Index is 1-based in the UI to align with labels; we convert to 0-based
+ * where needed when updating state.
+ */
 function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
   const id = `tray-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -32,14 +41,20 @@ function TraySlot({ index, children }: { index: number; children?: React.ReactNo
   )
 }
 
+/**
+ * Draggable representation of a shop card.
+ * Pass `hide` to visually hide the origin while the overlay is dragging.
+ */
 function DraggableCard({
   id,
   card,
   source,
+  hide,
 }: {
   id: string
   card: PlaceholderCard
   source?: DragCardSource
+  hide?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
@@ -58,6 +73,7 @@ function DraggableCard({
     userSelect: 'none',
     touchAction: 'none',
     cursor: 'grab',
+    opacity: hide ? 0 : 1,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
   }
   return (
@@ -67,6 +83,9 @@ function DraggableCard({
   )
 }
 
+/**
+ * Visual used inside DragOverlay and to fill a tray slot.
+ */
 function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fill' }) {
   const dim: React.CSSProperties =
     size === 'shop'
@@ -89,6 +108,10 @@ function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fi
   )
 }
 
+/**
+ * Draggable item already placed in the tray grid.
+ * The `hide` flag hides the original while it is being dragged so only the overlay is visible.
+ */
 function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard; hide?: boolean }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `tray-item-${index}`,
@@ -129,33 +152,41 @@ export default function Shop() {
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
 
+  // Pointer-only sensor with small activation distance to prevent accidental drags.
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
     }),
   )
 
+  // Small helper to clear active drag state.
+  const resetActive = () => {
+    setActiveCard(null)
+    setActiveId(null)
+  }
+
+  // Record which card/id is actively being dragged so we can render an overlay
+  // and optionally hide the original element during the drag.
   const handleDragStart = (e: DragStartEvent) => {
     const data = e.active.data.current as DragCardData | undefined
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
     setActiveId(String(e.active.id))
   }
 
+  // On drop: accept shop->tray into empty slot; allow tray<->tray swap; ignore others.
   const handleDragEnd = (e: DragEndEvent) => {
     const overId = e.over?.id ? String(e.over.id) : null
     const data = e.active.data.current as DragCardData | undefined
     const card = data?.card
 
     if (!card || !overId || !overId.startsWith('tray-')) {
-      setActiveCard(null)
-      setActiveId(null)
+      resetActive()
       return
     }
 
     const idx = Number(overId.split('-')[1]) - 1 // zero-based
     if (Number.isNaN(idx) || idx < 0 || idx >= tray.length) {
-      setActiveCard(null)
-      setActiveId(null)
+      resetActive()
       return
     }
 
@@ -184,13 +215,11 @@ export default function Shop() {
       }
     }
 
-    setActiveCard(null)
-    setActiveId(null)
+    resetActive()
   }
 
   const handleDragCancel = () => {
-    setActiveCard(null)
-    setActiveId(null)
+    resetActive()
   }
 
   return (
@@ -273,6 +302,7 @@ export default function Shop() {
                   id={`shop-${i}`}
                   card={card}
                   source={{ type: 'shop', index: i }}
+                  hide={activeId === `shop-${i}`}
                 />
               ))}
             </div>
@@ -285,7 +315,10 @@ export default function Shop() {
           <button className="btn ghost">Storage</button>
         </section>
       </div>
-      <DragOverlay>{activeCard ? <CardPreview card={activeCard} size="shop" /> : null}</DragOverlay>
+      {/* Disable default return animation to avoid snap-back on valid drops. */}
+      <DragOverlay dropAnimation={null}>
+        {activeCard ? <CardPreview card={activeCard} size="shop" /> : null}
+      </DragOverlay>
     </DndContext>
   )
 }
