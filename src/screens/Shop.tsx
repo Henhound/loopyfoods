@@ -336,8 +336,54 @@ export default function Shop() {
     card: PlaceholderCard
     onClose: () => void
   }) {
+    const ref = React.useRef<HTMLDivElement | null>(null)
+    React.useLayoutEffect(() => {
+      const el = ref.current
+      if (!el) return
+      const anchor = el.parentElement as HTMLElement | null
+      if (!anchor) return
+      const margin = 8
+      const place = () => {
+        const a = anchor.getBoundingClientRect()
+        const popW = el.offsetWidth
+        const popH = el.offsetHeight
+        let boundLeft = margin
+        let boundTop = margin
+        let boundRight = window.innerWidth - margin
+        let boundBottom = window.innerHeight - margin
+        const traySection = anchor.closest<HTMLElement>('.traySection')
+        if (traySection) {
+          const tr = traySection.getBoundingClientRect()
+          boundLeft = Math.max(boundLeft, tr.left + margin)
+          boundRight = Math.min(boundRight, tr.right - margin)
+          boundTop = Math.max(boundTop, tr.top + margin)
+          boundBottom = Math.min(boundBottom, tr.bottom - margin)
+        }
+        const spaceAbove = a.top - boundTop
+        const spaceBelow = boundBottom - a.bottom
+        const preferTop = spaceAbove >= popH || spaceAbove >= spaceBelow
+        const sideTop = preferTop
+        const desiredTop = sideTop ? a.top - popH - margin : a.bottom + margin
+        const desiredLeft = a.left + a.width / 2 - popW / 2
+        const topVp = Math.max(boundTop, Math.min(desiredTop, boundBottom - popH))
+        const leftVp = Math.max(boundLeft, Math.min(desiredLeft, boundRight - popW))
+        const relTop = topVp - a.top
+        const relLeft = leftVp - a.left
+        el.style.top = `${relTop}px`
+        el.style.left = `${relLeft}px`
+        el.style.bottom = 'auto'
+        el.style.transform = 'none'
+      }
+      place()
+      window.addEventListener('resize', place)
+      window.addEventListener('scroll', place)
+      return () => {
+        window.removeEventListener('resize', place)
+        window.removeEventListener('scroll', place)
+      }
+    }, [])
     return (
-      <div className="cardPopover" role="dialog" aria-label={`${card.title} details`}>
+      <div ref={ref} className="cardPopover" role="dialog" aria-label={`${card.title} details`}>
         <div className="cardPopoverHeader">
           <strong className="cardTitle">{card.title}</strong>
           <button className="popoverClose" aria-label="Close" onClick={onClose}>
