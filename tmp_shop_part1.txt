@@ -1,0 +1,500 @@
+import React from 'react'
+import '../styles/shop.css'
+import {
+  DndContext,
+  PointerSensor,
+  rectIntersection,
+  useDroppable,
+  useDraggable,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
+
+import { useNavigation } from '../app/navigation'
+import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
+import { PLACEHOLDER_JUDGES, type PlaceholderJudge } from '../data/placeholder-judge-cards'
+
+type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
+type DragJudgeSource = { type: 'judge-shop'; index: number } | { type: 'judge'; index: number }
+type DragData =
+  | { kind: 'food'; card: PlaceholderCard; source?: DragFoodSource }
+  | { kind: 'judge'; judge: PlaceholderJudge; source?: DragJudgeSource }
+
+const TRAY_SIZE = 5 as const
+
+function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
+  const id = `tray-${index}`
+  const { setNodeRef, isOver } = useDroppable({ id })
+  const cls = `slot ${index === TRAY_SIZE ? 'rect' : 'square'}`
+  const style: React.CSSProperties = isOver
+    ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
+    : {}
+  return (
+    <div ref={setNodeRef} className={cls} data-index={index} style={style}>
+      {children ?? <span>{index}</span>}
+    </div>
+  )
+}
+
+function JudgeSlot({ index, children }: { index: number; children?: React.ReactNode }) {
+  const id = `judge-${index}`
+  const { setNodeRef, isOver } = useDroppable({ id })
+  const style: React.CSSProperties = isOver
+    ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
+    : {}
+  return (
+    <div ref={setNodeRef} className="slot circle" data-index={index} style={style}>
+      {children}
+    </div>
+  )
+}
+
+function DraggableCard({
+  id,
+  card,
+  source,
+  hide,
+  selected,
+  onClick,
+}: {
+  id: string
+  card: PlaceholderCard
+  source?: DragFoodSource
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    data: { kind: 'food', card, source },
+  })
+  const style: React.CSSProperties = {
+    width: 'var(--slot-s)',
+    height: 'var(--slot-s)',
+    borderRadius: 10,
+    border: '1px solid var(--border-color)',
+    background: card.color,
+    color: '#fff',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={card.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
+      data-drag-id={id}
+    >
+      {card.title}
+    </div>
+  )
+}
+
+function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fill' }) {
+  const dim: React.CSSProperties =
+    size === 'shop'
+      ? { width: 'var(--slot-s)', height: 'var(--slot-s)' }
+      : { width: '100%', height: '100%' }
+  return (
+    <div
+      style={{
+        ...dim,
+        borderRadius: 10,
+        background: card.color,
+        color: '#fff',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: 700,
+      }}
+    >
+      {card.title}
+    </div>
+  )
+}
+
+function TrayItem({
+  index,
+  card,
+  hide,
+  selected,
+  onClick,
+}: {
+  index: number
+  card: PlaceholderCard
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `tray-item-${index}`,
+    data: { kind: 'food', card, source: { type: 'tray', index: index - 1 } },
+  })
+  const style: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    border: '1px solid var(--border-color)',
+    background: card.color,
+    color: '#fff',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={card.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
+      data-drag-id={`tray-item-${index}`}
+    >
+      {card.title}
+    </div>
+  )
+}
+
+function DraggableJudge({
+  id,
+  judge,
+  source,
+  hide,
+  selected,
+  onClick,
+}: {
+  id: string
+  judge: PlaceholderJudge
+  source?: DragJudgeSource
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    data: { kind: 'judge', judge, source },
+  })
+  const style: React.CSSProperties = {
+    width: 'var(--slot-s)',
+    height: 'var(--slot-s)',
+    borderRadius: 999,
+    border: '1px solid var(--border-color)',
+    background: '#fff',
+    color: '#111',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+    fontSize: 22,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={judge.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
+      data-drag-id={id}
+    >
+      <span aria-hidden="true">{judge.emoji}</span>
+    </div>
+  )
+}
+
+function JudgeItem({
+  index,
+  judge,
+  hide,
+  selected,
+  onClick,
+}: {
+  index: number
+  judge: PlaceholderJudge
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `judge-item-${index}`,
+    data: { kind: 'judge', judge, source: { type: 'judge', index: index - 1 } },
+  })
+  const style: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+    border: '1px solid var(--border-color)',
+    background: '#fff',
+    color: '#111',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+    fontSize: 24,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={judge.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
+      data-drag-id={`judge-item-${index}`}
+    >
+      <span aria-hidden="true">{judge.emoji}</span>
+    </div>
+  )
+}
+
+function JudgePreview({ judge, size }: { judge: PlaceholderJudge; size: 'shop' | 'fill' }) {
+  const dim: React.CSSProperties =
+    size === 'shop'
+      ? { width: 'var(--slot-s)', height: 'var(--slot-s)' }
+      : { width: '100%', height: '100%' }
+  return (
+    <div
+      style={{
+        ...dim,
+        borderRadius: 999,
+        background: '#fff',
+        border: '1px solid var(--border-color)',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: 700,
+        color: '#111',
+        fontSize: 24,
+      }}
+    >
+      <span aria-hidden="true">{judge.emoji}</span>
+    </div>
+  )
+}
+
+export default function Shop() {
+  const { back } = useNavigation()
+
+  const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
+    Array.from({ length: TRAY_SIZE }, () => null),
+  )
+  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(PLACEHOLDER_CARDS.slice(0, 5))
+  const [judges, setJudges] = React.useState<Array<PlaceholderJudge | null>>(
+    Array.from({ length: 3 }, () => null),
+  )
+  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(
+    PLACEHOLDER_JUDGES.slice(0, 2),
+  )
+
+  const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
+  const [activeJudge, setActiveJudge] = React.useState<PlaceholderJudge | null>(null)
+  const [activeId, setActiveId] = React.useState<string | null>(null)
+  const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(null)
+  const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
+  const [selectedShopIndex, setSelectedShopIndex] = React.useState<number | null>(null)
+  const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
+  const [selectedJudgeShopIndex, setSelectedJudgeShopIndex] = React.useState<number | null>(null)
+  const [selectedJudgeIndex, setSelectedJudgeIndex] = React.useState<number | null>(null)
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+
+  const resetActive = () => {
+    setActiveCard(null)
+    setActiveJudge(null)
+    setActiveId(null)
+    setActiveSize(null)
+    setActiveOffset(null)
+  }
+
+  const handleDragStart = (e: DragStartEvent) => {
+    setSelectedShopIndex(null)
+    setSelectedTrayIndex(null)
+    setSelectedJudgeShopIndex(null)
+    setSelectedJudgeIndex(null)
+
+    const data = e.active.data.current as DragData | undefined
+    if (data?.kind === 'food' && data.card) setActiveCard(data.card)
+    if (data?.kind === 'judge' && data.judge) setActiveJudge(data.judge)
+
+    const id = String(e.active.id)
+    setActiveId(id)
+
+    const el = document.querySelector<HTMLElement>(`[data-drag-id="${id}"]`)
+    const rect = el?.getBoundingClientRect()
+    if (!rect) {
+      setActiveSize(null)
+      setActiveOffset(null)
+      return
+    }
+
+    let overlayW = rect.width
+    let overlayH = rect.height
+
+    // pointer position within element
+    const ev = (e as any).activatorEvent as Event | undefined
+    let clientX: number | null = null
+    let clientY: number | null = null
+    if (ev) {
+      if (ev instanceof PointerEvent || ev instanceof MouseEvent) {
+        clientX = (ev as PointerEvent).clientX
+        clientY = (ev as PointerEvent).clientY
+      } else if (typeof TouchEvent !== 'undefined' && ev instanceof TouchEvent) {
+        if (ev.touches && ev.touches[0]) {
+          clientX = ev.touches[0].clientX
+          clientY = ev.touches[0].clientY
+        }
+      } else if ((ev as any).touches && (ev as any).touches[0]) {
+        clientX = (ev as any).touches[0].clientX
+        clientY = (ev as any).touches[0].clientY
+      }
+    }
+
+    const rx = clientX != null && rect.width > 0 ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) : 0.5
+    const ry = clientY != null && rect.height > 0 ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)) : 0.5
+
+    // If dragging from tray slot 5, shrink overlay to square slot dimensions for food cards only.
+    if (data?.kind === 'food' && data.source?.type === 'tray' && data.source.index === TRAY_SIZE - 1) {
+      const squareEl = document.querySelector<HTMLElement>('.trayGrid .slot.square')
+      const r = squareEl?.getBoundingClientRect()
+      if (r) {
+        overlayW = r.width
+        overlayH = r.height
+      }
+    }
+
+    const dx = rx * (rect.width - overlayW)
+    const dy = ry * (rect.height - overlayH)
+    setActiveSize({ width: overlayW, height: overlayH })
+    setActiveOffset({ x: dx, y: dy })
+  }
+
+  const handleFoodDragEnd = (e: DragEndEvent) => {
+    const overId = e.over?.id ? String(e.over.id) : null
+    const data = e.active.data.current as DragData | undefined
+    if (!overId || data?.kind !== 'food') return resetActive()
+
+    const idx = Number(overId.split('-')[1]) - 1
+    if (!overId.startsWith('tray-') || Number.isNaN(idx) || idx < 0 || idx >= tray.length) return resetActive()
+
+    if (data.source?.type === 'tray') {
+      const from = data.source.index
+      const to = idx
+      if (from !== to && from >= 0 && from < tray.length && to >= 0 && to < tray.length) {
+        setTray(prev => {
+          const next = [...prev]
+          const tmp = next[to]
+          next[to] = next[from]
+          next[from] = tmp || null
+          return next
+        })
+      }
+    } else if (tray[idx] == null) {
+      setTray(prev => {
+        if (prev[idx]) return prev
+        const next = [...prev]
+        next[idx] = data.card
+        return next
+      })
+      if (data.source?.type === 'shop') {
+        setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
+      }
+    }
+
+    resetActive()
+  }
+
+  const handleJudgeDragEnd = (e: DragEndEvent) => {
+    const overId = e.over?.id ? String(e.over.id) : null
+    const data = e.active.data.current as DragData | undefined
+    if (!overId || data?.kind !== 'judge') return resetActive()
+
+    const idx = Number(overId.split('-')[1]) - 1
+    if (!overId.startsWith('judge-') || Number.isNaN(idx) || idx < 0 || idx >= judges.length) return resetActive()
+
+    if (data.source?.type === 'judge') {
+      const from = data.source.index
+      const to = idx
+      if (from !== to && from >= 0 && from < judges.length && to >= 0 && to < judges.length) {
+        setJudges(prev => {
+          const next = [...prev]
+          const tmp = next[to]
+          next[to] = next[from]
+          next[from] = tmp || null
+          return next
+        })
+      }
+    } else if (judges[idx] == null) {
+      setJudges(prev => {
+        if (prev[idx]) return prev
+        const next = [...prev]
+        next[idx] = data.judge
+        return next
+      })
+      if (data.source?.type === 'judge-shop') {
+        setJudgeShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
+      }
+    }
+
+    resetActive()
+  }
+
+  const handleAnyDragEnd = (e: DragEndEvent) => {
+    const kind = (e.active.data.current as { kind?: string } | undefined)?.kind
+    if (kind === 'food') return handleFoodDragEnd(e)
+    if (kind === 'judge') return handleJudgeDragEnd(e)
+    resetActive()
+  }
+
+  function CardPopover({
+    item,
+    onClose,
+  }: {
+    item: { title: string; description: string }
+    onClose: () => void
+  }) {
+    const ref = React.useRef<HTMLDivElement | null>(null)
+    React.useLayoutEffect(() => {
+      const el = ref.current
+      if (!el) return
+      const anchor = el.parentElement as HTMLElement | null
+      if (!anchor) return
+      const margin = 8

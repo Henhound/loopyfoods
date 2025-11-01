@@ -10,6 +10,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 - Core loop: Shop + Arrange + Battle + Repeat.
 - Goal: Playable prototype to validate fun before backend work.
 - Tech stack: React + TypeScript + Vite (frontend only). Drag-and-drop in Shop via @dnd-kit; selection/click fallback optional. In-memory navigation (NavigationProvider); no URL routing.
+- Judges in prototype: Placeholder judge cards are wired into the Shop UI (Judge Shop + 3 Judge slots). Drag-and-drop to place/swap is implemented; no judge effects or economy yet.
 - Out of scope (for now): Firebase, accounts, leaderboards, persistence. Opposing players are placeholders for the prototype.
 
 ---
@@ -47,7 +48,8 @@ _(Single source of truth for ChatGPT & dev notes)_
      - Drag-and-drop (primary):
        - Shop -> Tray: Drag a Food Shop card onto an empty Tray slot to buy/place it (deduct gold if affordable). Dropping onto an occupied Tray slot is ignored.
        - Tray <-> Tray: Drag a Tray card onto any Tray slot to move it; dropping onto an occupied slot swaps the two cards.
-       - Judges & Storage: Dragging into Judge slots or to/from Storage is not yet implemented in the prototype.
+       - Judges: Drag a Judge Shop item onto an empty Judge slot to place it. Drag between Judge slots to reorder; dropping onto an occupied slot swaps. Judge Shop item removal on place is wired. (Prototype note: no gold/economy yet.)
+       - Storage: Dragging to/from Storage is not yet implemented in the prototype.
      - Selection-based fallback (secondary / planning):
        - Buy to Storage (auto-place): Select a shop card, then click the Storage button. If Storage has an empty slot, place it in the next available slot and deduct gold; if full, show an error and abort purchase.
        - Tray <-> Storage (auto-place): Select a Tray card, then click the Storage button to place it in the next available Storage slot if any; abort if full.
@@ -112,6 +114,7 @@ loopyfoods/
   .prettierignore
   .prettierrc
   .vscode/
+    settings.json
   docs/
     loopyfoods_spec.md
   eslint.config.js
@@ -119,24 +122,26 @@ loopyfoods/
   node_modules/
   package-lock.json
   package.json
-  public/
   README.md
   src/
+    App.css
+    index.css
+    main.tsx
     app/
       App.tsx
       screen.ts
       navigation.tsx
     assets/
       react.svg
+    data/
+      placeholder-food-cards.ts
+      placeholder-judge-cards.ts
     screens/
       MainMenu.tsx
       Shop.tsx
     styles/
       globals.css
       shop.css
-    App.css
-    index.css
-    main.tsx
   tsconfig.app.json
   tsconfig.json
   tsconfig.node.json
