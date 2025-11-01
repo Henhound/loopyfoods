@@ -77,7 +77,15 @@ function DraggableCard({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
   }
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} style={style} role="button" aria-label={card.title}>
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={card.title}
+      data-drag-id={id}
+    >
       {card.title}
     </div>
   )
@@ -134,7 +142,15 @@ function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard;
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
   }
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes} style={style} role="button" aria-label={card.title}>
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={card.title}
+      data-drag-id={`tray-item-${index}`}
+    >
       {card.title}
     </div>
   )
@@ -151,6 +167,9 @@ export default function Shop() {
   )
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
+  const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(
+    null,
+  )
 
   // Pointer-only sensor with small activation distance to prevent accidental drags.
   const sensors = useSensors(
@@ -163,6 +182,7 @@ export default function Shop() {
   const resetActive = () => {
     setActiveCard(null)
     setActiveId(null)
+    setActiveSize(null)
   }
 
   // Record which card/id is actively being dragged so we can render an overlay
@@ -170,7 +190,15 @@ export default function Shop() {
   const handleDragStart = (e: DragStartEvent) => {
     const data = e.active.data.current as DragCardData | undefined
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
-    setActiveId(String(e.active.id))
+    const id = String(e.active.id)
+    setActiveId(id)
+    const el = document.querySelector<HTMLElement>(`[data-drag-id="${id}"]`)
+    if (el) {
+      const rect = el.getBoundingClientRect()
+      setActiveSize({ width: rect.width, height: rect.height })
+    } else {
+      setActiveSize(null)
+    }
   }
 
   // On drop: accept shop->tray into empty slot; allow tray<->tray swap; ignore others.
@@ -317,7 +345,17 @@ export default function Shop() {
       </div>
       {/* Disable default return animation to avoid snap-back on valid drops. */}
       <DragOverlay dropAnimation={null}>
-        {activeCard ? <CardPreview card={activeCard} size="shop" /> : null}
+        {activeCard ? (
+          <div
+            style={
+              activeSize
+                ? { width: activeSize.width, height: activeSize.height }
+                : undefined
+            }
+          >
+            <CardPreview card={activeCard} size={activeSize ? 'fill' : 'shop'} />
+          </div>
+        ) : null}
       </DragOverlay>
     </DndContext>
   )
