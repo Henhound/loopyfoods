@@ -1,92 +1,293 @@
 import React from 'react'
 import '../styles/shop.css'
 import { useNavigation } from '../app/navigation'
+import { DndContext, PointerSensor, rectIntersection, useDroppable, useDraggable, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/cards'
+
+function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
+  const id = `tray-${index}`
+  const { setNodeRef, isOver } = useDroppable({ id })
+  const cls = `slot ${index === 5 ? 'rect' : 'square'}`
+  const style: React.CSSProperties = isOver
+    ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
+    : {}
+  return (
+    <div ref={setNodeRef} className={cls} data-index={index} style={style}>
+      {children ?? <span>{index}</span>}
+    </div>
+  )
+}
+
+function DraggableCard({
+  id,
+  card,
+  source,
+}: {
+  id: string
+  card: PlaceholderCard
+  source?: { type: 'shop'; index: number }
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    data: { kind: 'card', card, source },
+  })
+  const style: React.CSSProperties = {
+    width: 'var(--slot-s)',
+    height: 'var(--slot-s)',
+    borderRadius: 10,
+    border: '1px solid var(--border-color)',
+    background: card.color,
+    color: '#fff',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+  }
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} style={style} role="button" aria-label={card.title}>
+      {card.title}
+    </div>
+  )
+}
+
+function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fill' }) {
+  const dim: React.CSSProperties =
+    size === 'shop'
+      ? { width: 'var(--slot-s)', height: 'var(--slot-s)' }
+      : { width: '100%', height: '100%' }
+  return (
+    <div
+      style={{
+        ...dim,
+        borderRadius: 10,
+        background: card.color,
+        color: '#fff',
+        display: 'grid',
+        placeItems: 'center',
+        fontWeight: 700,
+      }}
+    >
+      {card.title}
+    </div>
+  )
+}
+
+function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard; hide?: boolean }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `tray-item-${index}`,
+    data: { kind: 'card', card, source: { type: 'tray', index: index - 1 } },
+  })
+  const style: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+    border: '1px solid var(--border-color)',
+    background: card.color,
+    color: '#fff',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+  }
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes} style={style} role="button" aria-label={card.title}>
+      {card.title}
+    </div>
+  )
+}
 
 export default function Shop() {
   const { back } = useNavigation()
+
+  const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>([
+    null,
+    null,
+    null,
+    null,
+    null,
+  ])
+  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(
+    PLACEHOLDER_CARDS.slice(0, 5),
+  )
+  const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
+  const [activeId, setActiveId] = React.useState<string | null>(null)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+  )
+
+  const handleDragStart = (e: DragStartEvent) => {
+    const data = e.active.data.current as { kind?: string; card?: PlaceholderCard } | undefined
+    if (data?.kind === 'card' && data.card) setActiveCard(data.card)
+    setActiveId(String(e.active.id))
+  }
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const overId = e.over?.id ? String(e.over.id) : null
+    const data = e.active.data.current as
+      | {
+          kind?: string
+          card?: PlaceholderCard
+          source?: { type: 'shop'; index: number } | { type: 'tray'; index: number }
+        }
+      | undefined
+    const card = data?.card
+    if (card && overId && overId.startsWith('tray-')) {
+      const idx = Number(overId.split('-')[1]) - 1
+      if (!Number.isNaN(idx)) {
+        // If dragging from tray -> tray, support move/swap
+        if (data?.source?.type === 'tray') {
+          const from = data.source.index // zero-based
+          const to = idx // zero-based
+          if (from !== to && from >= 0 && from < tray.length && to >= 0 && to < tray.length) {
+            setTray(prev => {
+              const next = [...prev]
+              const tmp = next[to]
+              next[to] = next[from]
+              next[from] = tmp || null
+              return next
+            })
+          }
+        } else if (idx >= 0 && idx < tray.length && tray[idx] == null) {
+          // From shop -> tray only into empty slot
+          setTray(prev => {
+            if (prev[idx]) return prev
+            const next = [...prev]
+            next[idx] = card
+            return next
+          })
+          if (data?.source?.type === 'shop') {
+            setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
+          }
+        }
+      }
+    }
+    setActiveCard(null)
+    setActiveId(null)
+  }
+
+  const handleDragCancel = () => {
+    setActiveCard(null)
+    setActiveId(null)
+  }
+
   return (
-    <div className="shop">
-      <div className="topbar">
-        <button onClick={back} className="btn ghost">Back</button>
-        <div className="miniStats" aria-label="session stats">
-          <span title="Gold">🪙 10</span>
-          <span title="Health">❤️ 2/5</span>
-          <span title="Trophies">🏆 3/10</span>
-          <span title="Round">🔄 1</span>
-          <span title="Star Target">⭐ 100</span>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rectIntersection}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className="shop">
+        <div className="topbar">
+          <button onClick={back} className="btn ghost">Back</button>
+          <div className="miniStats" aria-label="session stats">
+            <span title="Gold">Gold 10</span>
+            <span title="Health">Health 2/5</span>
+            <span title="Trophies">Trophies 3/10</span>
+            <span title="Round">Round 1</span>
+            <span title="Star Target">Target 100</span>
+          </div>
         </div>
-      </div>
 
-      {/* selection info removed for more space */}
+        {/* selection info removed for more space */}
 
-      <section className="judgesSection">
-        <div className="sectionLabel">Judges</div>
-        <div className="judgeRow">
-          {[0, 1, 2].map(i => (
-            <div key={i} className="slot circle" />
-          ))}
-        </div>
-      </section>
+        <section className="judgesSection">
+          <div className="sectionLabel">Judges</div>
+          <div className="judgeRow">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="slot circle" />
+            ))}
+          </div>
+        </section>
 
-      <section className="mid">
-        <div className="traySection">
-          <div className="sectionLabel">Food Loop</div>
-          <div className="trayFit">
-            <div className="trayViewport">
-              <div className="trayGrid">
-                <div className="slot square" data-index="1">
-                  <span>1</span>
-                </div>
-                <div className="slot square" data-index="2">
-                  <span>2</span>
-                </div>
-                <div className="slot square" data-index="3">
-                  <span>3</span>
-                </div>
-                <div className="slot square" data-index="4">
-                  <span>4</span>
-                </div>
-                <div className="slot rect" data-index="5">
-                  <span>5</span>
+        <section className="mid">
+          <div className="traySection">
+            <div className="sectionLabel">Food Loop</div>
+            <div className="trayFit">
+              <div className="trayViewport">
+                <div className="trayGrid">
+                  <TraySlot index={1}>
+                    {tray[0] && (
+                      <TrayItem index={1} card={tray[0]} hide={activeId === 'tray-item-1'} />
+                    )}
+                  </TraySlot>
+                  <TraySlot index={2}>
+                    {tray[1] && (
+                      <TrayItem index={2} card={tray[1]} hide={activeId === 'tray-item-2'} />
+                    )}
+                  </TraySlot>
+                  <TraySlot index={3}>
+                    {tray[2] && (
+                      <TrayItem index={3} card={tray[2]} hide={activeId === 'tray-item-3'} />
+                    )}
+                  </TraySlot>
+                  <TraySlot index={4}>
+                    {tray[3] && (
+                      <TrayItem index={4} card={tray[3]} hide={activeId === 'tray-item-4'} />
+                    )}
+                  </TraySlot>
+                  <TraySlot index={5}>
+                    {tray[4] && (
+                      <TrayItem index={5} card={tray[4]} hide={activeId === 'tray-item-5'} />
+                    )}
+                  </TraySlot>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="shopsSection">
-        <div className="judgeRowWrap">
-          <div className="panelBox judgeShopBox">
-            <div className="sectionLabel small">Judge Shop</div>
+        <section className="shopsSection">
+          <div className="judgeRowWrap">
+            <div className="panelBox judgeShopBox">
+              <div className="sectionLabel small">Judge Shop</div>
+              <div className="shopRow">
+                {[0, 1].map(i => (
+                  <div key={i} className="slot circle" />
+                ))}
+              </div>
+            </div>
+            <div className="panelBox actionsZone">
+              <div className="actionsRow">
+                <button className="btn subtle">Upgrade Tray</button>
+                <button className="btn warning">Reroll</button>
+              </div>
+            </div>
+          </div>
+          <div className="row foodShop">
+            <div className="sectionLabel small">Food Shop</div>
             <div className="shopRow">
-              {[0, 1].map(i => (
-                <div key={i} className="slot circle" />
+              {shopItems.map((card, i) => (
+                <DraggableCard
+                  key={`shop-${i}`}
+                  id={`shop-${i}`}
+                  card={card}
+                  source={{ type: 'shop', index: i }}
+                />
               ))}
             </div>
           </div>
-          <div className="panelBox actionsZone">
-            <div className="actionsRow">
-              <button className="btn subtle">Upgrade Tray</button>
-              <button className="btn warning">Reroll</button>
-            </div>
-          </div>
-        </div>
-        <div className="row foodShop">
-          <div className="sectionLabel small">Food Shop</div>
-          <div className="shopRow">
-            {[0, 1, 2, 3, 4].map(i => (
-              <div key={i} className="slot square" />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="bottomBar">
-        <button className="btn cta">Lunch Time</button>
-        <button className="btn ghost">Sell</button>
-        <button className="btn ghost">Storage</button>
-      </section>
-    </div>
+        <section className="bottomBar">
+          <button className="btn cta">Lunch Time</button>
+          <button className="btn ghost">Sell</button>
+          <button className="btn ghost">Storage</button>
+        </section>
+      </div>
+      <DragOverlay>{activeCard ? <CardPreview card={activeCard} size="shop" /> : null}</DragOverlay>
+    </DndContext>
   )
 }
