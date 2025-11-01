@@ -1,6 +1,5 @@
 import React from 'react'
 import '../styles/shop.css'
-import { useNavigation } from '../app/navigation'
 import {
   DndContext,
   PointerSensor,
@@ -11,7 +10,9 @@ import {
   useSensors,
   DragOverlay,
 } from '@dnd-kit/core'
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
+
+import { useNavigation } from '../app/navigation'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/cards'
 
 /**
@@ -162,17 +163,10 @@ export default function Shop() {
   const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
     Array.from({ length: TRAY_SIZE }, () => null),
   )
-  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(
-    PLACEHOLDER_CARDS.slice(0, 5),
-  )
+  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(PLACEHOLDER_CARDS.slice(0, 5))
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
-  const [activeSource, setActiveSource] = React.useState<DragCardSource | undefined>(
-    undefined,
-  )
-  const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(
-    null,
-  )
+  const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(null)
   const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
 
   // Pointer-only sensor with small activation distance to prevent accidental drags.
@@ -186,7 +180,6 @@ export default function Shop() {
   const resetActive = () => {
     setActiveCard(null)
     setActiveId(null)
-    setActiveSource(undefined)
     setActiveSize(null)
     setActiveOffset(null)
   }
@@ -198,7 +191,6 @@ export default function Shop() {
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
     const id = String(e.active.id)
     setActiveId(id)
-    setActiveSource(data?.source)
     // Measure size for overlay. Special case: if dragging from tray slot 5 (rect),
     // use the size of a square tray slot so the overlay isn't oversized.
     const el = document.querySelector<HTMLElement>(`[data-drag-id="${id}"]`)
@@ -214,25 +206,32 @@ export default function Shop() {
     let overlayH = rect.height
 
     // Compute pointer position within original element at drag start.
-    const ae: any = (e as any).activatorEvent
+    const ev = (e as unknown as { activatorEvent?: Event }).activatorEvent
     let clientX: number | null = null
     let clientY: number | null = null
-    if (ae) {
-      if (typeof ae.clientX === 'number' && typeof ae.clientY === 'number') {
-        clientX = ae.clientX
-        clientY = ae.clientY
-      } else if (ae.touches && ae.touches[0]) {
-        clientX = ae.touches[0].clientX
-        clientY = ae.touches[0].clientY
+    if (ev) {
+      if (ev instanceof PointerEvent || ev instanceof MouseEvent) {
+        clientX = ev.clientX
+        clientY = ev.clientY
+      } else if (typeof TouchEvent !== 'undefined' && ev instanceof TouchEvent) {
+        if (ev.touches && ev.touches[0]) {
+          clientX = ev.touches[0].clientX
+          clientY = ev.touches[0].clientY
+        }
+      } else if ((ev as any).touches && (ev as any).touches[0]) {
+        clientX = (ev as any).touches[0].clientX
+        clientY = (ev as any).touches[0].clientY
       }
     }
 
-    const rx = clientX != null && rect.width
-      ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-      : 0.5
-    const ry = clientY != null && rect.height
-      ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
-      : 0.5
+    const rx =
+      clientX != null && rect.width > 0
+        ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+        : 0.5
+    const ry =
+      clientY != null && rect.height > 0
+        ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
+        : 0.5
 
     // If dragging from tray slot 5, shrink overlay to square slot dimensions.
     if (data?.source?.type === 'tray' && data.source.index === TRAY_SIZE - 1) {
@@ -311,7 +310,9 @@ export default function Shop() {
     >
       <div className="shop">
         <div className="topbar">
-          <button onClick={back} className="btn ghost">Back</button>
+          <button onClick={back} className="btn ghost">
+            Back
+          </button>
           <div className="miniStats" aria-label="session stats">
             <span title="Gold">Gold 10</span>
             <span title="Health">Health 2/5</span>
@@ -344,7 +345,11 @@ export default function Shop() {
                     return (
                       <TraySlot index={idx} key={idx}>
                         {item && (
-                          <TrayItem index={idx} card={item} hide={activeId === `tray-item-${idx}`} />
+                          <TrayItem
+                            index={idx}
+                            card={item}
+                            hide={activeId === `tray-item-${idx}`}
+                          />
                         )}
                       </TraySlot>
                     )
@@ -398,24 +403,20 @@ export default function Shop() {
       {/** Apply an offset when the overlay size differs (slot 5 case) to keep it under the pointer. */}
       <DragOverlay
         dropAnimation={null}
-        modifiers={React.useMemo(() => {
-          if (!activeOffset) return undefined as any
-          const adjust = ({ transform }: any) => ({
+        modifiers={React.useMemo<Modifier[] | undefined>(() => {
+          if (!activeOffset) return undefined
+          const adjust: Modifier = ({ transform }) => ({
             ...transform,
             x: transform.x + activeOffset.x,
             y: transform.y + activeOffset.y,
           })
-          return [adjust] as any
+          return [adjust]
         }, [activeOffset])}
         style={{ pointerEvents: 'none' }}
       >
         {activeCard ? (
           <div
-            style={
-              activeSize
-                ? { width: activeSize.width, height: activeSize.height }
-                : undefined
-            }
+            style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}
           >
             <CardPreview card={activeCard} size={activeSize ? 'fill' : 'shop'} />
           </div>
