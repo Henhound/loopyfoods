@@ -1,14 +1,27 @@
 import React from 'react'
 import '../styles/shop.css'
 import { useNavigation } from '../app/navigation'
-import { DndContext, PointerSensor, rectIntersection, useDroppable, useDraggable, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
+import {
+  DndContext,
+  PointerSensor,
+  rectIntersection,
+  useDroppable,
+  useDraggable,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core'
 import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/cards'
+
+type DragCardSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
+type DragCardData = { kind: 'card'; card: PlaceholderCard; source?: DragCardSource }
+const TRAY_SIZE = 5 as const
 
 function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
   const id = `tray-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
-  const cls = `slot ${index === 5 ? 'rect' : 'square'}`
+  const cls = `slot ${index === TRAY_SIZE ? 'rect' : 'square'}`
   const style: React.CSSProperties = isOver
     ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
     : {}
@@ -26,7 +39,7 @@ function DraggableCard({
 }: {
   id: string
   card: PlaceholderCard
-  source?: { type: 'shop'; index: number }
+  source?: DragCardSource
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
@@ -107,13 +120,9 @@ function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard;
 export default function Shop() {
   const { back } = useNavigation()
 
-  const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>([
-    null,
-    null,
-    null,
-    null,
-    null,
-  ])
+  const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
+    Array.from({ length: TRAY_SIZE }, () => null),
+  )
   const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(
     PLACEHOLDER_CARDS.slice(0, 5),
   )
@@ -127,51 +136,54 @@ export default function Shop() {
   )
 
   const handleDragStart = (e: DragStartEvent) => {
-    const data = e.active.data.current as { kind?: string; card?: PlaceholderCard } | undefined
+    const data = e.active.data.current as DragCardData | undefined
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
     setActiveId(String(e.active.id))
   }
 
   const handleDragEnd = (e: DragEndEvent) => {
     const overId = e.over?.id ? String(e.over.id) : null
-    const data = e.active.data.current as
-      | {
-          kind?: string
-          card?: PlaceholderCard
-          source?: { type: 'shop'; index: number } | { type: 'tray'; index: number }
-        }
-      | undefined
+    const data = e.active.data.current as DragCardData | undefined
     const card = data?.card
-    if (card && overId && overId.startsWith('tray-')) {
-      const idx = Number(overId.split('-')[1]) - 1
-      if (!Number.isNaN(idx)) {
-        // If dragging from tray -> tray, support move/swap
-        if (data?.source?.type === 'tray') {
-          const from = data.source.index // zero-based
-          const to = idx // zero-based
-          if (from !== to && from >= 0 && from < tray.length && to >= 0 && to < tray.length) {
-            setTray(prev => {
-              const next = [...prev]
-              const tmp = next[to]
-              next[to] = next[from]
-              next[from] = tmp || null
-              return next
-            })
-          }
-        } else if (idx >= 0 && idx < tray.length && tray[idx] == null) {
-          // From shop -> tray only into empty slot
-          setTray(prev => {
-            if (prev[idx]) return prev
-            const next = [...prev]
-            next[idx] = card
-            return next
-          })
-          if (data?.source?.type === 'shop') {
-            setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
-          }
-        }
+
+    if (!card || !overId || !overId.startsWith('tray-')) {
+      setActiveCard(null)
+      setActiveId(null)
+      return
+    }
+
+    const idx = Number(overId.split('-')[1]) - 1 // zero-based
+    if (Number.isNaN(idx) || idx < 0 || idx >= tray.length) {
+      setActiveCard(null)
+      setActiveId(null)
+      return
+    }
+
+    if (data?.source?.type === 'tray') {
+      const from = data.source.index
+      const to = idx
+      if (from !== to && from >= 0 && from < tray.length && to >= 0 && to < tray.length) {
+        setTray(prev => {
+          const next = [...prev]
+          const tmp = next[to]
+          next[to] = next[from]
+          next[from] = tmp || null
+          return next
+        })
+      }
+    } else if (tray[idx] == null) {
+      // From shop -> tray only into empty slot
+      setTray(prev => {
+        if (prev[idx]) return prev
+        const next = [...prev]
+        next[idx] = card
+        return next
+      })
+      if (data?.source?.type === 'shop') {
+        setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
       }
     }
+
     setActiveCard(null)
     setActiveId(null)
   }
@@ -218,31 +230,17 @@ export default function Shop() {
             <div className="trayFit">
               <div className="trayViewport">
                 <div className="trayGrid">
-                  <TraySlot index={1}>
-                    {tray[0] && (
-                      <TrayItem index={1} card={tray[0]} hide={activeId === 'tray-item-1'} />
-                    )}
-                  </TraySlot>
-                  <TraySlot index={2}>
-                    {tray[1] && (
-                      <TrayItem index={2} card={tray[1]} hide={activeId === 'tray-item-2'} />
-                    )}
-                  </TraySlot>
-                  <TraySlot index={3}>
-                    {tray[2] && (
-                      <TrayItem index={3} card={tray[2]} hide={activeId === 'tray-item-3'} />
-                    )}
-                  </TraySlot>
-                  <TraySlot index={4}>
-                    {tray[3] && (
-                      <TrayItem index={4} card={tray[3]} hide={activeId === 'tray-item-4'} />
-                    )}
-                  </TraySlot>
-                  <TraySlot index={5}>
-                    {tray[4] && (
-                      <TrayItem index={5} card={tray[4]} hide={activeId === 'tray-item-5'} />
-                    )}
-                  </TraySlot>
+                  {Array.from({ length: TRAY_SIZE }, (_, i) => {
+                    const idx = i + 1
+                    const item = tray[i]
+                    return (
+                      <TraySlot index={idx} key={idx}>
+                        {item && (
+                          <TrayItem index={idx} card={item} hide={activeId === `tray-item-${idx}`} />
+                        )}
+                      </TraySlot>
+                    )
+                  })}
                 </div>
               </div>
             </div>
