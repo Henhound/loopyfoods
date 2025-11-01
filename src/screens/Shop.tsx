@@ -24,6 +24,16 @@ type DragData =
 
 const TRAY_SIZE = 5 as const
 
+function pickRandomWithReplacement<T>(source: readonly T[], count: number): T[] {
+  const out: T[] = []
+  if (!source.length || count <= 0) return out
+  for (let i = 0; i < count; i++) {
+    const idx = Math.floor(Math.random() * source.length)
+    out.push(source[idx])
+  }
+  return out
+}
+
 function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
   const id = `tray-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -317,12 +327,14 @@ export default function Shop() {
   const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
     Array.from({ length: TRAY_SIZE }, () => null),
   )
-  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(PLACEHOLDER_CARDS.slice(0, 5))
+  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() =>
+    pickRandomWithReplacement(PLACEHOLDER_CARDS, 5),
+  )
   const [judges, setJudges] = React.useState<Array<PlaceholderJudge | null>>(
     Array.from({ length: 3 }, () => null),
   )
-  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(
-    PLACEHOLDER_JUDGES.slice(0, 2),
+  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(() =>
+    pickRandomWithReplacement(PLACEHOLDER_JUDGES, 2),
   )
 
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
@@ -660,7 +672,15 @@ export default function Shop() {
             <div className="panelBox actionsZone">
               <div className="actionsRow">
                 <button className="btn subtle">Upgrade Tray</button>
-                <button className="btn warning">Reroll</button>
+                <button
+                  className="btn warning"
+                  onClick={() => {
+                    setSelectedShopIndex(null)
+                    setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
+                  }}
+                >
+                  Reroll
+                </button>
               </div>
             </div>
           </div>
