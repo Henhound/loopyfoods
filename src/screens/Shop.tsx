@@ -13,7 +13,7 @@ import {
 import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 
 import { useNavigation } from '../app/navigation'
-import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/cards'
+import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
 
 /**
  * dnd-kit drag metadata for cards. We keep track of where a drag started

@@ -54,7 +54,8 @@ export const PLACEHOLDER_CARDS: PlaceholderCard[] = [
   },
   {
     title: 'Gelato',
-    description: 'Chilled delight. Preserves last round’s best flavor.',
+    description: 'Chilled delight. Preserves last round�?Ts best flavor.',
     color: '#38bdf8',
   },
 ]
+
