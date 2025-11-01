@@ -601,7 +601,7 @@ export default function Shop() {
         <div className="cardPopoverHeader">
           <strong className="cardTitle">{item.title}</strong>
           <button className="popoverClose" aria-label="Close" onClick={onClose}>
-            A-
+            ×
           </button>
         </div>
         <div className="cardPopoverBody">{item.description}</div>
