@@ -167,9 +167,13 @@ export default function Shop() {
   )
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
+  const [activeSource, setActiveSource] = React.useState<DragCardSource | undefined>(
+    undefined,
+  )
   const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(
     null,
   )
+  const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
 
   // Pointer-only sensor with small activation distance to prevent accidental drags.
   const sensors = useSensors(
@@ -182,7 +186,9 @@ export default function Shop() {
   const resetActive = () => {
     setActiveCard(null)
     setActiveId(null)
+    setActiveSource(undefined)
     setActiveSize(null)
+    setActiveOffset(null)
   }
 
   // Record which card/id is actively being dragged so we can render an overlay
@@ -192,13 +198,58 @@ export default function Shop() {
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
     const id = String(e.active.id)
     setActiveId(id)
+    setActiveSource(data?.source)
+    // Measure size for overlay. Special case: if dragging from tray slot 5 (rect),
+    // use the size of a square tray slot so the overlay isn't oversized.
     const el = document.querySelector<HTMLElement>(`[data-drag-id="${id}"]`)
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      setActiveSize({ width: rect.width, height: rect.height })
-    } else {
+    const rect = el?.getBoundingClientRect()
+    if (!rect) {
       setActiveSize(null)
+      setActiveOffset(null)
+      return
     }
+
+    // Default overlay matches original size, no offset.
+    let overlayW = rect.width
+    let overlayH = rect.height
+
+    // Compute pointer position within original element at drag start.
+    const ae: any = (e as any).activatorEvent
+    let clientX: number | null = null
+    let clientY: number | null = null
+    if (ae) {
+      if (typeof ae.clientX === 'number' && typeof ae.clientY === 'number') {
+        clientX = ae.clientX
+        clientY = ae.clientY
+      } else if (ae.touches && ae.touches[0]) {
+        clientX = ae.touches[0].clientX
+        clientY = ae.touches[0].clientY
+      }
+    }
+
+    const rx = clientX != null && rect.width
+      ? Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      : 0.5
+    const ry = clientY != null && rect.height
+      ? Math.max(0, Math.min(1, (clientY - rect.top) / rect.height))
+      : 0.5
+
+    // If dragging from tray slot 5, shrink overlay to square slot dimensions.
+    if (data?.source?.type === 'tray' && data.source.index === TRAY_SIZE - 1) {
+      const squareEl = document.querySelector<HTMLElement>('.trayGrid .slot.square')
+      const r = squareEl?.getBoundingClientRect()
+      if (r) {
+        overlayW = r.width
+        overlayH = r.height
+      }
+    }
+
+    // Offset overlay so the pointer remains over the same relative point.
+    const dx = rx * (rect.width - overlayW)
+    const dy = ry * (rect.height - overlayH)
+
+    setActiveSize({ width: overlayW, height: overlayH })
+    setActiveOffset({ x: dx, y: dy })
   }
 
   // On drop: accept shop->tray into empty slot; allow tray<->tray swap; ignore others.
@@ -344,7 +395,20 @@ export default function Shop() {
         </section>
       </div>
       {/* Disable default return animation to avoid snap-back on valid drops. */}
-      <DragOverlay dropAnimation={null}>
+      {/** Apply an offset when the overlay size differs (slot 5 case) to keep it under the pointer. */}
+      <DragOverlay
+        dropAnimation={null}
+        modifiers={React.useMemo(() => {
+          if (!activeOffset) return undefined as any
+          const adjust = ({ transform }: any) => ({
+            ...transform,
+            x: transform.x + activeOffset.x,
+            y: transform.y + activeOffset.y,
+          })
+          return [adjust] as any
+        }, [activeOffset])}
+        style={{ pointerEvents: 'none' }}
+      >
         {activeCard ? (
           <div
             style={
