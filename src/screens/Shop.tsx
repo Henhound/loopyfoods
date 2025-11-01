@@ -51,11 +51,15 @@ function DraggableCard({
   card,
   source,
   hide,
+  selected,
+  onClick,
 }: {
   id: string
   card: PlaceholderCard
   source?: DragCardSource
   hide?: boolean
+  selected?: boolean
+  onClick?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
@@ -76,6 +80,8 @@ function DraggableCard({
     cursor: 'grab',
     opacity: hide ? 0 : 1,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
   }
   return (
     <div
@@ -85,6 +91,8 @@ function DraggableCard({
       style={style}
       role="button"
       aria-label={card.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
       data-drag-id={id}
     >
       {card.title}
@@ -121,7 +129,19 @@ function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fi
  * Draggable item already placed in the tray grid.
  * The `hide` flag hides the original while it is being dragged so only the overlay is visible.
  */
-function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard; hide?: boolean }) {
+function TrayItem({
+  index,
+  card,
+  hide,
+  selected,
+  onClick,
+}: {
+  index: number
+  card: PlaceholderCard
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `tray-item-${index}`,
     data: { kind: 'card', card, source: { type: 'tray', index: index - 1 } },
@@ -141,6 +161,8 @@ function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard;
     cursor: 'grab',
     opacity: hide ? 0 : 1,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
   }
   return (
     <div
@@ -150,6 +172,8 @@ function TrayItem({ index, card, hide }: { index: number; card: PlaceholderCard;
       style={style}
       role="button"
       aria-label={card.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
       data-drag-id={`tray-item-${index}`}
     >
       {card.title}
@@ -168,6 +192,8 @@ export default function Shop() {
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(null)
   const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
+  const [selectedShopIndex, setSelectedShopIndex] = React.useState<number | null>(null)
+  const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
 
   // Pointer-only sensor with small activation distance to prevent accidental drags.
   const sensors = useSensors(
@@ -187,6 +213,9 @@ export default function Shop() {
   // Record which card/id is actively being dragged so we can render an overlay
   // and optionally hide the original element during the drag.
   const handleDragStart = (e: DragStartEvent) => {
+    // Clear selection when a drag begins
+    setSelectedShopIndex(null)
+    setSelectedTrayIndex(null)
     const data = e.active.data.current as DragCardData | undefined
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
     const id = String(e.active.id)
@@ -300,6 +329,26 @@ export default function Shop() {
     resetActive()
   }
 
+  function CardPopover({
+    card,
+    onClose,
+  }: {
+    card: PlaceholderCard
+    onClose: () => void
+  }) {
+    return (
+      <div className="cardPopover" role="dialog" aria-label={`${card.title} details`}>
+        <div className="cardPopoverHeader">
+          <strong className="cardTitle">{card.title}</strong>
+          <button className="popoverClose" aria-label="Close" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="cardPopoverBody">{card.description}</div>
+      </div>
+    )
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -345,11 +394,18 @@ export default function Shop() {
                     return (
                       <TraySlot index={idx} key={idx}>
                         {item && (
-                          <TrayItem
-                            index={idx}
-                            card={item}
-                            hide={activeId === `tray-item-${idx}`}
-                          />
+                          <div className="trayCardWrap">
+                            <TrayItem
+                              index={idx}
+                              card={item}
+                              hide={activeId === `tray-item-${idx}`}
+                              selected={selectedTrayIndex === i}
+                              onClick={() => setSelectedTrayIndex(s => (s === i ? null : i))}
+                            />
+                            {selectedTrayIndex === i ? (
+                              <CardPopover card={item} onClose={() => setSelectedTrayIndex(null)} />
+                            ) : null}
+                          </div>
                         )}
                       </TraySlot>
                     )
@@ -380,15 +436,25 @@ export default function Shop() {
           <div className="row foodShop">
             <div className="sectionLabel small">Food Shop</div>
             <div className="shopRow">
-              {shopItems.map((card, i) => (
-                <DraggableCard
-                  key={`shop-${i}`}
-                  id={`shop-${i}`}
-                  card={card}
-                  source={{ type: 'shop', index: i }}
-                  hide={activeId === `shop-${i}`}
-                />
-              ))}
+              {shopItems.map((card, i) => {
+                const id = `shop-${i}`
+                const selected = selectedShopIndex === i
+                return (
+                  <div key={id} className="shopCardWrap">
+                    <DraggableCard
+                      id={id}
+                      card={card}
+                      source={{ type: 'shop', index: i }}
+                      hide={activeId === id}
+                      selected={selected}
+                      onClick={() => setSelectedShopIndex(s => (s === i ? null : i))}
+                    />
+                    {selected ? (
+                      <CardPopover card={card} onClose={() => setSelectedShopIndex(null)} />
+                    ) : null}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </section>
