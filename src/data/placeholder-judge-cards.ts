@@ -10,17 +10,17 @@ export const PLACEHOLDER_JUDGES: PlaceholderJudge[] = [
   {
     title: 'Chef Ada',
     description: 'Methodical palate. Rewards precise combos and clean plating.',
-    emoji: '🧪',
+    emoji: '👩‍🍳',
   },
   {
     title: 'Critic Bruno',
     description: 'Loves bold flavors. Bonuses for spice and risk-taking.',
-    emoji: '🌶️',
+    emoji: '🧐',
   },
   {
     title: 'Guru Chai',
     description: 'Seeks balance. Prefers harmony between sweet and savory.',
-    emoji: '🧘',
+    emoji: '☯️',
   },
   {
     title: 'Diva Dolce',
@@ -30,7 +30,7 @@ export const PLACEHOLDER_JUDGES: PlaceholderJudge[] = [
   {
     title: 'Captain Umami',
     description: 'Depth hunter. Amplifies stews, broths, and aged flavors.',
-    emoji: '🌊',
+    emoji: '🍜',
   },
 ]
 

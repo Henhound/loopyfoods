@@ -14,6 +14,7 @@ import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 
 import { useNavigation } from '../app/navigation'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
+import { PLACEHOLDER_JUDGES, type PlaceholderJudge } from '../data/placeholder-judge-cards'
 
 /**
  * dnd-kit drag metadata for cards. We keep track of where a drag started
@@ -21,6 +22,9 @@ import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-foo
  */
 type DragCardSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragCardData = { kind: 'card'; card: PlaceholderCard; source?: DragCardSource }
+// Judge drag metadata parallels food cards
+type DragJudgeSource = { type: 'judge-shop'; index: number } | { type: 'judge'; index: number }
+type DragJudgeData = { kind: 'judge'; judge: PlaceholderJudge; source?: DragJudgeSource }
 const TRAY_SIZE = 5 as const
 
 /**
@@ -96,6 +100,19 @@ function DraggableCard({
       data-drag-id={id}
     >
       {card.title}
+    </div>
+  )
+}
+
+function JudgeSlot({ index, children }: { index: number; children?: React.ReactNode }) {
+  const id = `judge-${index}`
+  const { setNodeRef, isOver } = useDroppable({ id })
+  const style: React.CSSProperties = isOver
+    ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
+    : {}
+  return (
+    <div ref={setNodeRef} className="slot circle" data-index={index} style={style}>
+      {children}
     </div>
   )
 }
@@ -181,6 +198,181 @@ function TrayItem({
   )
 }
 
+function DraggableJudge({
+  id,
+  judge,
+  source,
+  hide,
+  selected,
+  onClick,
+}: {
+  id: string
+  judge: PlaceholderJudge
+  source?: DragJudgeSource
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    data: { kind: 'judge', judge, source },
+  })
+  const style: React.CSSProperties = {
+    width: 'var(--slot-s)',
+    height: 'var(--slot-s)',
+    borderRadius: 999,
+    border: '1px solid var(--border-color)',
+    background: '#fff',
+    color: '#111',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+    fontSize: 22,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={judge.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
+      data-drag-id={id}
+    >
+      <span aria-hidden="true">{judge.emoji}</span>
+    </div>
+  )
+}
+
+function JudgeItem({
+  index,
+  judge,
+  hide,
+  selected,
+  onClick,
+}: {
+  index: number
+  judge: PlaceholderJudge
+  hide?: boolean
+  selected?: boolean
+  onClick?: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `judge-item-${index}`,
+    data: { kind: 'judge', judge, source: { type: 'judge', index: index - 1 } },
+  })
+  const style: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+    border: '1px solid var(--border-color)',
+    background: '#fff',
+    color: '#111',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    userSelect: 'none',
+    touchAction: 'none',
+    cursor: 'grab',
+    opacity: hide ? 0 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+    fontSize: 24,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      style={style}
+      role="button"
+      aria-label={judge.title}
+      aria-pressed={selected ? true : undefined}
+      onClick={onClick}
+      data-drag-id={`judge-item-${index}`}
+    >
+      <span aria-hidden="true">{judge.emoji}</span>
+    </div>
+  )
+}
+
+// Judge shop/popover components
+function JudgePopover({
+  judge,
+  onClose,
+}: {
+  judge: PlaceholderJudge
+  onClose: () => void
+}) {
+  const ref = React.useRef<HTMLDivElement | null>(null)
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const anchor = el.parentElement as HTMLElement | null
+    if (!anchor) return
+    const margin = 8
+    const place = () => {
+      const a = anchor.getBoundingClientRect()
+      const popW = el.offsetWidth
+      const popH = el.offsetHeight
+      let boundLeft = margin
+      let boundTop = margin
+      let boundRight = window.innerWidth - margin
+      let boundBottom = window.innerHeight - margin
+      const traySection = anchor.closest<HTMLElement>('.traySection')
+      if (traySection) {
+        const tr = traySection.getBoundingClientRect()
+        boundLeft = Math.max(boundLeft, tr.left + margin)
+        boundRight = Math.min(boundRight, tr.right - margin)
+        boundTop = Math.max(boundTop, tr.top + margin)
+        boundBottom = Math.min(boundBottom, tr.bottom - margin)
+      }
+      const spaceAbove = a.top - boundTop
+      const spaceBelow = boundBottom - a.bottom
+      const preferTop = spaceAbove >= popH || spaceAbove >= spaceBelow
+      const sideTop = preferTop
+      const desiredTop = sideTop ? a.top - popH - margin : a.bottom + margin
+      const desiredLeft = a.left + a.width / 2 - popW / 2
+      const topVp = Math.max(boundTop, Math.min(desiredTop, boundBottom - popH))
+      const leftVp = Math.max(boundLeft, Math.min(desiredLeft, boundRight - popW))
+      const relTop = topVp - a.top
+      const relLeft = leftVp - a.left
+      el.style.top = `${relTop}px`
+      el.style.left = `${relLeft}px`
+      el.style.bottom = 'auto'
+      el.style.transform = 'none'
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place)
+    }
+  }, [])
+  return (
+    <div ref={ref} className="cardPopover" role="dialog" aria-label={`${judge.title} details`}>
+      <div className="cardPopoverHeader">
+        <strong className="cardTitle">{judge.title}</strong>
+        <button className="popoverClose" aria-label="Close" onClick={onClose}>
+          A-
+        </button>
+      </div>
+      <div className="cardPopoverBody">{judge.description}</div>
+    </div>
+  )
+}
+
 export default function Shop() {
   const { back } = useNavigation()
 
@@ -189,11 +381,20 @@ export default function Shop() {
   )
   const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(PLACEHOLDER_CARDS.slice(0, 5))
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
+  const [activeJudge, setActiveJudge] = React.useState<PlaceholderJudge | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(null)
   const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
   const [selectedShopIndex, setSelectedShopIndex] = React.useState<number | null>(null)
   const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
+  const [judges, setJudges] = React.useState<Array<PlaceholderJudge | null>>(
+    Array.from({ length: 3 }, () => null),
+  )
+  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(
+    PLACEHOLDER_JUDGES.slice(0, 2),
+  )
+  const [selectedJudgeShopIndex, setSelectedJudgeShopIndex] = React.useState<number | null>(null)
+  const [selectedJudgeIndex, setSelectedJudgeIndex] = React.useState<number | null>(null)
 
   // Pointer-only sensor with small activation distance to prevent accidental drags.
   const sensors = useSensors(
@@ -205,6 +406,7 @@ export default function Shop() {
   // Small helper to clear active drag state.
   const resetActive = () => {
     setActiveCard(null)
+    setActiveJudge(null)
     setActiveId(null)
     setActiveSize(null)
     setActiveOffset(null)
@@ -216,8 +418,12 @@ export default function Shop() {
     // Clear selection when a drag begins
     setSelectedShopIndex(null)
     setSelectedTrayIndex(null)
+    setSelectedJudgeShopIndex(null)
+    setSelectedJudgeIndex(null)
     const data = e.active.data.current as DragCardData | undefined
     if (data?.kind === 'card' && data.card) setActiveCard(data.card)
+    const jdata = e.active.data.current as DragJudgeData | undefined
+    if (jdata?.kind === 'judge' && jdata.judge) setActiveJudge(jdata.judge)
     const id = String(e.active.id)
     setActiveId(id)
     // Measure size for overlay. Special case: if dragging from tray slot 5 (rect),
@@ -329,6 +535,58 @@ export default function Shop() {
     resetActive()
   }
 
+  // Handle judge drops: shop -> judge slot (if empty) and judge <-> judge swap
+  const handleJudgeDragEnd = (e: DragEndEvent) => {
+    const overId = e.over?.id ? String(e.over.id) : null
+    const data = e.active.data.current as DragJudgeData | undefined
+    const judge = data?.judge
+
+    if (!judge || !overId || !overId.startsWith('judge-')) {
+      resetActive()
+      return
+    }
+
+    const idx = Number(overId.split('-')[1]) - 1 // zero-based
+    if (Number.isNaN(idx) || idx < 0 || idx >= judges.length) {
+      resetActive()
+      return
+    }
+
+    if (data?.source?.type === 'judge') {
+      const from = data.source.index
+      const to = idx
+      if (from !== to && from >= 0 && from < judges.length && to >= 0 && to < judges.length) {
+        setJudges(prev => {
+          const next = [...prev]
+          const tmp = next[to]
+          next[to] = next[from]
+          next[from] = tmp || null
+          return next
+        })
+      }
+    } else if (judges[idx] == null) {
+      setJudges(prev => {
+        if (prev[idx]) return prev
+        const next = [...prev]
+        next[idx] = judge
+        return next
+      })
+      if (data?.source?.type === 'judge-shop') {
+        setJudgeShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
+      }
+    }
+
+    resetActive()
+  }
+
+  // Dispatch to food or judge handler based on active data kind
+  const handleAnyDragEnd = (e: DragEndEvent) => {
+    const kind = (e.active.data.current as { kind?: string } | undefined)?.kind
+    if (kind === 'card') return handleDragEnd(e)
+    if (kind === 'judge') return handleJudgeDragEnd(e)
+    resetActive()
+  }
+
   function CardPopover({
     card,
     onClose,
@@ -400,7 +658,7 @@ export default function Shop() {
       sensors={sensors}
       collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      onDragEnd={handleAnyDragEnd}
       onDragCancel={handleDragCancel}
     >
       <div className="shop">
@@ -422,9 +680,27 @@ export default function Shop() {
         <section className="judgesSection">
           <div className="sectionLabel">Judges</div>
           <div className="judgeRow">
-            {[0, 1, 2].map(i => (
-              <div key={i} className="slot circle" />
-            ))}
+            {judges.map((j, i) => {
+              const idx = i + 1
+              return (
+                <JudgeSlot index={idx} key={idx}>
+                  {j && (
+                    <div className="trayCardWrap">
+                      <JudgeItem
+                        index={idx}
+                        judge={j}
+                        hide={activeId === `judge-item-${idx}`}
+                        selected={selectedJudgeIndex === i}
+                        onClick={() => setSelectedJudgeIndex(s => (s === i ? null : i))}
+                      />
+                      {selectedJudgeIndex === i ? (
+                        <JudgePopover judge={j} onClose={() => setSelectedJudgeIndex(null)} />
+                      ) : null}
+                    </div>
+                  )}
+                </JudgeSlot>
+              )
+            })}
           </div>
         </section>
 
@@ -467,9 +743,25 @@ export default function Shop() {
             <div className="panelBox judgeShopBox">
               <div className="sectionLabel small">Judge Shop</div>
               <div className="shopRow">
-                {[0, 1].map(i => (
-                  <div key={i} className="slot circle" />
-                ))}
+                {judgeShopItems.map((j, i) => {
+                  const id = `judge-shop-${i}`
+                  const selected = selectedJudgeShopIndex === i
+                  return (
+                    <div key={id} className="shopCardWrap">
+                      <DraggableJudge
+                        id={id}
+                        judge={j}
+                        source={{ type: 'judge-shop', index: i }}
+                        hide={activeId === id}
+                        selected={selected}
+                        onClick={() => setSelectedJudgeShopIndex(s => (s === i ? null : i))}
+                      />
+                      {selected ? (
+                        <JudgePopover judge={j} onClose={() => setSelectedJudgeShopIndex(null)} />
+                      ) : null}
+                    </div>
+                  )
+                })}
               </div>
             </div>
             <div className="panelBox actionsZone">
@@ -527,10 +819,38 @@ export default function Shop() {
         style={{ pointerEvents: 'none' }}
       >
         {activeCard ? (
-          <div
-            style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}
-          >
+          <div style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}>
             <CardPreview card={activeCard} size={activeSize ? 'fill' : 'shop'} />
+          </div>
+        ) : activeJudge ? (
+          <div style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}>
+            <div style={{ width: '100%', height: '100%' }}>
+              {/* Judge overlay preview */}
+              {(() => {
+                const dimStyle = activeSize ? { width: '100%', height: '100%' } : undefined
+                return (
+                  <div style={dimStyle}>
+                    {/* inline preview to avoid forward ref issues */}
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 999,
+                        background: '#fff',
+                        border: '1px solid var(--border-color)',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontWeight: 700,
+                        color: '#111',
+                        fontSize: 24,
+                      }}
+                    >
+                      <span aria-hidden="true">{activeJudge.emoji}</span>
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
           </div>
         ) : null}
       </DragOverlay>
