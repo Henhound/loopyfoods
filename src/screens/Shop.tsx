@@ -538,8 +538,8 @@ export default function Shop() {
 
   const handleBackgroundMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
-    // Ignore clicks on selectable items or their popovers
-    if (target.closest('[data-selectable="true"], .cardPopover')) return
+    // Ignore clicks on selectable items, their popovers, or bottom controls
+    if (target.closest('[data-selectable="true"], .cardPopover, .bottomBar')) return
     setSelection(null)
   }
 
@@ -768,7 +768,7 @@ export default function Shop() {
           <section className="bottomBar">
             <button className="btn cta">Lunch Time</button>
             <button
-              className="btn ghost"
+              className={`btn ghost ${selectedTrayIndex != null || selectedJudgeIndex != null ? 'hasIndicator' : ''}`}
               disabled={selectedTrayIndex == null && selectedJudgeIndex == null}
               onClick={handleSell}
             >

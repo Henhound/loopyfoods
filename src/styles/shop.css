@@ -270,5 +270,11 @@
 .btn.warning { background: var(--warning); color: #fff; }
 .btn.cta { background: var(--accent); color: #fff; }
 
+/* Button indicator: make actionable buttons pop with a red box */
+.btn.ghost.hasIndicator {
+  border-color: #ef4444; /* red */
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
 /* Wider screens (desktop preview) */
 /* no special overrides needed for removed top block */
