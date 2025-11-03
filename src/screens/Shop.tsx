@@ -24,6 +24,13 @@ type DragData =
 
 const TRAY_SIZE = 5 as const
 
+// Simple economy values
+const FOOD_COST = 3
+const FOOD_SELL_VALUE = 1
+const JUDGE_COST = 6
+const JUDGE_SELL_VALUE = 2
+const REROLL_COST = 1
+
 function pickRandomWithReplacement<T>(source: readonly T[], count: number): T[] {
   const out: T[] = []
   if (!source.length || count <= 0) return out
@@ -340,6 +347,7 @@ export default function Shop() {
   const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(() =>
     pickRandomWithReplacement(PLACEHOLDER_JUDGES, 2),
   )
+  const [gold, setGold] = React.useState<number>(10)
 
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeJudge, setActiveJudge] = React.useState<PlaceholderJudge | null>(null)
@@ -459,15 +467,17 @@ export default function Shop() {
         })
       }
     } else if (tray[idx] == null) {
+      if (data.source?.type === 'shop') {
+        if (gold < FOOD_COST) return resetActive()
+        setGold(g => g - FOOD_COST)
+        setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
+      }
       setTray(prev => {
         if (prev[idx]) return prev
         const next = [...prev]
         next[idx] = data.card
         return next
       })
-      if (data.source?.type === 'shop') {
-        setShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
-      }
     }
 
     resetActive()
@@ -494,15 +504,17 @@ export default function Shop() {
         })
       }
     } else if (judges[idx] == null) {
+      if (data.source?.type === 'judge-shop') {
+        if (gold < JUDGE_COST) return resetActive()
+        setGold(g => g - JUDGE_COST)
+        setJudgeShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
+      }
       setJudges(prev => {
         if (prev[idx]) return prev
         const next = [...prev]
         next[idx] = data.judge
         return next
       })
-      if (data.source?.type === 'judge-shop') {
-        setJudgeShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
-      }
     }
 
     resetActive()
@@ -522,6 +534,7 @@ export default function Shop() {
         next[selectedTrayIndex] = null
         return next
       })
+      setGold(g => g + FOOD_SELL_VALUE)
       setSelectedTrayIndex(null)
       return
     }
@@ -531,6 +544,7 @@ export default function Shop() {
         next[selectedJudgeIndex] = null
         return next
       })
+      setGold(g => g + JUDGE_SELL_VALUE)
       setSelectedJudgeIndex(null)
       return
     }
@@ -621,7 +635,7 @@ export default function Shop() {
         <div className="topbar">
           <button onClick={back} className="btn ghost">Back</button>
           <div className="miniStats" aria-label="session stats">
-            <span title="Gold">Gold 10</span>
+            <span title="Gold">Gold {gold}</span>
             <span title="Health">Health 2/5</span>
             <span title="Trophies">Trophies 3/10</span>
             <span title="Round">Round 1</span>
@@ -729,9 +743,14 @@ export default function Shop() {
                 <button className="btn subtle">Upgrade Tray</button>
                 <button
                   className="btn warning"
+                  disabled={gold < REROLL_COST}
                   onClick={() => {
+                    if (gold < REROLL_COST) return
+                    setGold(g => g - REROLL_COST)
                     setSelectedShopIndex(null)
                     setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
+                    setSelectedJudgeShopIndex(null)
+                    setJudgeShopItems(() => pickRandomWithReplacement(PLACEHOLDER_JUDGES, 2))
                   }}
                 >
                   Reroll
