@@ -15,21 +15,19 @@ import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 import { useNavigation } from '../app/navigation'
 import { SCREENS } from '../app/screen'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
-import { PLACEHOLDER_JUDGES, type PlaceholderJudge } from '../data/placeholder-judge-cards'
+import { PLACEHOLDER_KIDS, type PlaceholderKid } from '../data/placeholder-kid-cards'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
-type DragJudgeSource = { type: 'judge-shop'; index: number } | { type: 'judge'; index: number }
+type DragKidSource = { type: 'kid'; index: number } | { type: 'kid-option'; index: number }
 type DragData =
   | { kind: 'food'; card: PlaceholderCard; source?: DragFoodSource }
-  | { kind: 'judge'; judge: PlaceholderJudge; source?: DragJudgeSource }
+  | { kind: 'kid'; kid: PlaceholderKid; source: DragKidSource }
 
 const TRAY_SIZE = 5 as const
 
 // Simple economy values
 const FOOD_COST = 3
 const FOOD_SELL_VALUE = 1
-const JUDGE_COST = 6
-const JUDGE_SELL_VALUE = 2
 const REROLL_COST = 1
 
 function pickRandomWithReplacement<T>(source: readonly T[], count: number): T[] {
@@ -56,14 +54,14 @@ function TraySlot({ index, children }: { index: number; children?: React.ReactNo
   )
 }
 
-function JudgeSlot({ index, children }: { index: number; children?: React.ReactNode }) {
-  const id = `judge-${index}`
+function LunchLineSlot({ index, children }: { index: number; children?: React.ReactNode }) {
+  const id = `kid-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
   const style: React.CSSProperties = isOver
     ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
     : {}
   return (
-    <div ref={setNodeRef} className="slot circle" data-index={index} style={style}>
+    <div ref={setNodeRef} className="slot circle lunchLineSlot" data-index={index} style={style}>
       {children}
     </div>
   )
@@ -199,78 +197,24 @@ function TrayItem({
   )
 }
 
-function DraggableJudge({
+function DraggableKid({
   id,
-  judge,
+  kid,
   source,
   hide,
   selected,
   onClick,
 }: {
   id: string
-  judge: PlaceholderJudge
-  source?: DragJudgeSource
+  kid: PlaceholderKid
+  source: DragKidSource
   hide?: boolean
   selected?: boolean
   onClick?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
-    data: { kind: 'judge', judge, source },
-  })
-  const style: React.CSSProperties = {
-    width: 'var(--slot-s)',
-    height: 'var(--slot-s)',
-    borderRadius: 999,
-    border: '1px solid var(--border-color)',
-    background: '#fff',
-    color: '#111',
-    display: 'grid',
-    placeItems: 'center',
-    fontWeight: 700,
-    userSelect: 'none',
-    touchAction: 'none',
-    cursor: 'grab',
-    opacity: hide ? 0 : 1,
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    outline: selected ? '2px solid var(--accent)' : undefined,
-    outlineOffset: selected ? -2 : undefined,
-    fontSize: 22,
-  }
-  return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      style={style}
-      role="button"
-      aria-label={judge.title}
-      aria-pressed={selected ? true : undefined}
-      onClick={onClick}
-      data-selectable="true"
-      data-drag-id={id}
-    >
-      <span aria-hidden="true">{judge.emoji}</span>
-    </div>
-  )
-}
-
-function JudgeItem({
-  index,
-  judge,
-  hide,
-  selected,
-  onClick,
-}: {
-  index: number
-  judge: PlaceholderJudge
-  hide?: boolean
-  selected?: boolean
-  onClick?: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id: `judge-item-${index}`,
-    data: { kind: 'judge', judge, source: { type: 'judge', index: index - 1 } },
+    data: { kind: 'kid', kid, source },
   })
   const style: React.CSSProperties = {
     width: '100%',
@@ -289,7 +233,7 @@ function JudgeItem({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     outline: selected ? '2px solid var(--accent)' : undefined,
     outlineOffset: selected ? -2 : undefined,
-    fontSize: 24,
+    fontSize: 18,
   }
   return (
     <div
@@ -298,21 +242,23 @@ function JudgeItem({
       {...attributes}
       style={style}
       role="button"
-      aria-label={judge.title}
+      aria-label={kid.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
       data-selectable="true"
-      data-drag-id={`judge-item-${index}`}
+      data-drag-id={id}
     >
-      <span aria-hidden="true">{judge.emoji}</span>
+      <span aria-hidden="true" className="kidEmoji">
+        {kid.emoji}
+      </span>
     </div>
   )
 }
 
-function JudgePreview({ judge, size }: { judge: PlaceholderJudge; size: 'shop' | 'fill' }) {
+function KidPreview({ kid, size }: { kid: PlaceholderKid; size: 'shop' | 'fill' }) {
   const dim: React.CSSProperties =
     size === 'shop'
-      ? { width: 'var(--slot-s)', height: 'var(--slot-s)' }
+      ? { width: 'var(--slot-m)', height: 'var(--slot-m)' }
       : { width: '100%', height: '100%' }
   return (
     <div
@@ -325,10 +271,69 @@ function JudgePreview({ judge, size }: { judge: PlaceholderJudge; size: 'shop' |
         placeItems: 'center',
         fontWeight: 700,
         color: '#111',
-        fontSize: 24,
       }}
     >
-      <span aria-hidden="true">{judge.emoji}</span>
+      <span aria-hidden="true">{kid.emoji}</span>
+    </div>
+  )
+}
+
+function KidOptionToken({
+  kid,
+  index,
+  selected,
+  locked,
+  onClick,
+}: {
+  kid: PlaceholderKid
+  index: number
+  selected: boolean
+  locked: boolean
+  onClick: () => void
+}) {
+  const id = `kid-option-${index}`
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id,
+    disabled: locked,
+    data: { kind: 'kid', kid, source: { type: 'kid-option', index } },
+  })
+  const circleStyle: React.CSSProperties = {
+    width: 'var(--slot-m)',
+    height: 'var(--slot-m)',
+    borderRadius: 999,
+    border: '1px solid var(--border-color)',
+    background: '#fff',
+    color: '#111',
+    display: 'grid',
+    placeItems: 'center',
+    fontWeight: 700,
+    cursor: locked ? 'not-allowed' : 'grab',
+    opacity: locked ? 0.5 : selected ? 1 : 0.95,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    outline: selected ? '2px solid var(--accent)' : undefined,
+    outlineOffset: selected ? -2 : undefined,
+  }
+  return (
+    <div
+      className={`kidOptionToken ${selected ? 'isSelected' : ''} ${locked ? 'isLocked' : ''}`}
+      data-selectable="true"
+      onClick={locked ? undefined : onClick}
+    >
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        className="kidOptionCircle"
+        style={circleStyle}
+        role="button"
+        aria-label={kid.title}
+        aria-pressed={selected ? true : undefined}
+        data-drag-id={id}
+      >
+        <span aria-hidden="true" className="kidEmoji">
+          {kid.emoji}
+        </span>
+      </div>
     </div>
   )
 }
@@ -342,44 +347,44 @@ export default function Shop() {
   const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() =>
     pickRandomWithReplacement(PLACEHOLDER_CARDS, 5),
   )
-  const [judges, setJudges] = React.useState<Array<PlaceholderJudge | null>>(
-    Array.from({ length: 3 }, () => null),
+  const [kids, setKids] = React.useState<PlaceholderKid[]>([])
+  const [kidOptions, setKidOptions] = React.useState<PlaceholderKid[]>(() =>
+    pickRandomWithReplacement(PLACEHOLDER_KIDS, 3),
   )
-  const [judgeShopItems, setJudgeShopItems] = React.useState<PlaceholderJudge[]>(() =>
-    pickRandomWithReplacement(PLACEHOLDER_JUDGES, 2),
-  )
+  const [hasDraftedKidThisRound, setHasDraftedKidThisRound] = React.useState(false)
+  const [round, setRound] = React.useState(1)
   const [gold, setGold] = React.useState<number>(10)
 
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
-  const [activeJudge, setActiveJudge] = React.useState<PlaceholderJudge | null>(null)
+  const [activeKid, setActiveKid] = React.useState<PlaceholderKid | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(null)
   const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
   const [selectedShopIndex, setSelectedShopIndex] = React.useState<number | null>(null)
   const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
-  const [selectedJudgeShopIndex, setSelectedJudgeShopIndex] = React.useState<number | null>(null)
-  const [selectedJudgeIndex, setSelectedJudgeIndex] = React.useState<number | null>(null)
+  const [selectedKidOptionIndex, setSelectedKidOptionIndex] = React.useState<number | null>(null)
+  const [selectedKidIndex, setSelectedKidIndex] = React.useState<number | null>(null)
 
   // Ensure only one thing is selected at a time across all areas
   type Selection =
     | { type: 'shop'; index: number }
     | { type: 'tray'; index: number }
-    | { type: 'judge-shop'; index: number }
-    | { type: 'judge'; index: number }
+    | { type: 'kid-option'; index: number }
+    | { type: 'kid'; index: number }
     | null
 
   const setSelection = React.useCallback((sel: Selection) => {
     setSelectedShopIndex(sel?.type === 'shop' ? sel.index : null)
     setSelectedTrayIndex(sel?.type === 'tray' ? sel.index : null)
-    setSelectedJudgeShopIndex(sel?.type === 'judge-shop' ? sel.index : null)
-    setSelectedJudgeIndex(sel?.type === 'judge' ? sel.index : null)
+    setSelectedKidOptionIndex(sel?.type === 'kid-option' ? sel.index : null)
+    setSelectedKidIndex(sel?.type === 'kid' ? sel.index : null)
   }, [])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const resetActive = () => {
     setActiveCard(null)
-    setActiveJudge(null)
+    setActiveKid(null)
     setActiveId(null)
     setActiveSize(null)
     setActiveOffset(null)
@@ -388,12 +393,12 @@ export default function Shop() {
   const handleDragStart = (e: DragStartEvent) => {
     setSelectedShopIndex(null)
     setSelectedTrayIndex(null)
-    setSelectedJudgeShopIndex(null)
-    setSelectedJudgeIndex(null)
+    setSelectedKidOptionIndex(null)
+    setSelectedKidIndex(null)
 
     const data = e.active.data.current as DragData | undefined
     if (data?.kind === 'food' && data.card) setActiveCard(data.card)
-    if (data?.kind === 'judge' && data.judge) setActiveJudge(data.judge)
+    if (data?.kind === 'kid' && data.kid) setActiveKid(data.kid)
 
     const id = String(e.active.id)
     setActiveId(id)
@@ -484,38 +489,28 @@ export default function Shop() {
     resetActive()
   }
 
-  const handleJudgeDragEnd = (e: DragEndEvent) => {
+  const handleKidDragEnd = (e: DragEndEvent) => {
     const overId = e.over?.id ? String(e.over.id) : null
     const data = e.active.data.current as DragData | undefined
-    if (!overId || data?.kind !== 'judge') return resetActive()
+    if (!overId || data?.kind !== 'kid') return resetActive()
 
-    const idx = Number(overId.split('-')[1]) - 1
-    if (!overId.startsWith('judge-') || Number.isNaN(idx) || idx < 0 || idx >= judges.length) return resetActive()
+    if (!overId.startsWith('kid-')) return resetActive()
+    const idx = Number(overId.split('-')[1])
+    if (Number.isNaN(idx) || idx < 0 || idx > kids.length) return resetActive()
 
-    if (data.source?.type === 'judge') {
+    if (data.source.type === 'kid') {
       const from = data.source.index
-      const to = idx
-      if (from !== to && from >= 0 && from < judges.length && to >= 0 && to < judges.length) {
-        setJudges(prev => {
-          const next = [...prev]
-          const tmp = next[to]
-          next[to] = next[from]
-          next[from] = tmp || null
-          return next
-        })
-      }
-    } else if (judges[idx] == null) {
-      if (data.source?.type === 'judge-shop') {
-        if (gold < JUDGE_COST) return resetActive()
-        setGold(g => g - JUDGE_COST)
-        setJudgeShopItems(prev => prev.filter((_, i) => i !== data.source!.index))
-      }
-      setJudges(prev => {
-        if (prev[idx]) return prev
+      setKids(prev => {
+        if (from < 0 || from >= prev.length) return prev
         const next = [...prev]
-        next[idx] = data.judge
+        let insert = Math.max(0, Math.min(idx, next.length))
+        const [moved] = next.splice(from, 1)
+        if (insert > from) insert -= 1
+        next.splice(insert, 0, moved)
         return next
       })
+    } else if (data.source.type === 'kid-option') {
+      draftKidAt(data.source.index, idx)
     }
 
     resetActive()
@@ -524,7 +519,7 @@ export default function Shop() {
   const handleAnyDragEnd = (e: DragEndEvent) => {
     const kind = (e.active.data.current as { kind?: string } | undefined)?.kind
     if (kind === 'food') return handleFoodDragEnd(e)
-    if (kind === 'judge') return handleJudgeDragEnd(e)
+    if (kind === 'kid') return handleKidDragEnd(e)
     resetActive()
   }
 
@@ -539,16 +534,6 @@ export default function Shop() {
       setSelectedTrayIndex(null)
       return
     }
-    if (selectedJudgeIndex != null) {
-      setJudges(prev => {
-        const next = [...prev]
-        next[selectedJudgeIndex] = null
-        return next
-      })
-      setGold(g => g + JUDGE_SELL_VALUE)
-      setSelectedJudgeIndex(null)
-      return
-    }
   }
 
   const handleBackgroundMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -556,6 +541,36 @@ export default function Shop() {
     // Ignore clicks on selectable items, their popovers, or bottom controls
     if (target.closest('[data-selectable="true"], .cardPopover, .bottomBar')) return
     setSelection(null)
+  }
+
+  const draftKidAt = React.useCallback(
+    (optionIndex: number, insertIndex?: number) => {
+      if (hasDraftedKidThisRound) return
+      const kid = kidOptions[optionIndex]
+      if (!kid) return
+      setKids(prev => {
+        const target = Math.max(0, Math.min(insertIndex ?? prev.length, prev.length))
+        const next = [...prev]
+        next.splice(target, 0, kid)
+        return next
+      })
+      setHasDraftedKidThisRound(true)
+      setSelectedKidOptionIndex(null)
+    },
+    [kidOptions, hasDraftedKidThisRound],
+  )
+
+  const handlePickKid = (index: number) => {
+    draftKidAt(index)
+  }
+
+  const handleLunchTime = () => {
+    if (!hasDraftedKidThisRound) return
+    setRound(r => r + 1)
+    setKidOptions(() => pickRandomWithReplacement(PLACEHOLDER_KIDS, 3))
+    setSelectedKidOptionIndex(null)
+    setHasDraftedKidThisRound(false)
+    navigate(SCREENS.BATTLE, { tray, kids })
   }
 
   function CardPopover({
@@ -639,43 +654,44 @@ export default function Shop() {
             <span title="Gold">Gold {gold}</span>
             <span title="Health">Health 2/5</span>
             <span title="Trophies">Trophies 3/10</span>
-            <span title="Round">Round 1</span>
+            <span title="Round">Round {round}</span>
             <span title="Star Target">Target 100</span>
           </div>
         </div>
 
-        <section className="judgesSection">
-          <div className="sectionLabel">Judges</div>
-          <div className="judgeRow">
-            {judges.map((j, i) => {
-              const idx = i + 1
-              return (
-                <JudgeSlot index={idx} key={idx}>
-                  {j && (
-                    <div className="trayCardWrap">
-                        <JudgeItem
-                          index={idx}
-                          judge={j}
-                          hide={activeId === `judge-item-${idx}`}
-                          selected={selectedJudgeIndex === i}
-                          onClick={() =>
-                            setSelection(selectedJudgeIndex === i ? null : { type: 'judge', index: i })
-                          }
-                        />
-                        {selectedJudgeIndex === i ? (
-                          <CardPopover item={j} onClose={() => setSelectedJudgeIndex(null)} />
-                        ) : null}
-                    </div>
-                  )}
-                </JudgeSlot>
-              )
-            })}
+        <section className="lunchLineSection">
+          <div className="sectionLabel">Lunch Line</div>
+          <div className="lunchLineRow">
+            {kids.map((kid, i) => (
+              <LunchLineSlot index={i} key={`kid-slot-${i}`}>
+                <div className="kidCardWrap">
+                  <DraggableKid
+                    id={`kid-item-${i}`}
+                    kid={kid}
+                    source={{ type: 'kid', index: i }}
+                    hide={activeId === `kid-item-${i}`}
+                    selected={selectedKidIndex === i}
+                    onClick={() =>
+                      setSelection(selectedKidIndex === i ? null : { type: 'kid', index: i })
+                    }
+                  />
+                  {selectedKidIndex === i ? (
+                    <CardPopover item={kid} onClose={() => setSelectedKidIndex(null)} />
+                  ) : null}
+                </div>
+              </LunchLineSlot>
+            ))}
+            <LunchLineSlot index={kids.length} key="kid-slot-append">
+              <div className="kidAddHint" aria-hidden="true">
+                {kids.length === 0 ? 'Drop Kid' : '+'}
+              </div>
+            </LunchLineSlot>
           </div>
         </section>
 
         <section className="mid">
           <div className="traySection">
-            <div className="sectionLabel">Food Loop</div>
+            <div className="sectionLabel">Hot Lunch Tray</div>
             <div className="trayFit">
               <div className="trayViewport">
                 <div className="trayGrid">
@@ -712,51 +728,41 @@ export default function Shop() {
         </section>
 
         <section className="shopsSection">
-          <div className="judgeRowWrap">
-            <div className="panelBox judgeShopBox">
-              <div className="sectionLabel small">Judge Shop</div>
-              <div className="shopRow">
-                {judgeShopItems.map((j, i) => {
-                  const id = `judge-shop-${i}`
-                  const selected = selectedJudgeShopIndex === i
+          <div className="row pickKid">
+            <div className="sectionLabel small">Pick Kid</div>
+            <div className="pickKidContent">
+              <div className="kidOptionsRow">
+                {kidOptions.map((kid, i) => {
+                  const selected = selectedKidOptionIndex === i
+                  const locked = hasDraftedKidThisRound
                   return (
-                    <div key={id} className="shopCardWrap">
-                        <DraggableJudge
-                          id={id}
-                          judge={j}
-                          source={{ type: 'judge-shop', index: i }}
-                          hide={activeId === id}
-                          selected={selected}
-                          onClick={() =>
-                            setSelection(selected ? null : { type: 'judge-shop', index: i })
-                          }
-                        />
-                        {selected ? (
-                          <CardPopover item={j} onClose={() => setSelectedJudgeShopIndex(null)} />
-                        ) : null}
+                    <div key={`kid-option-${i}`} className="kidOptionWrap">
+                      <KidOptionToken
+                        kid={kid}
+                        index={i}
+                        selected={selected}
+                        locked={locked}
+                        onClick={() =>
+                          setSelection(selected ? null : { type: 'kid-option', index: i })
+                        }
+                      />
+                      {selected ? (
+                        <CardPopover item={kid} onClose={() => setSelectedKidOptionIndex(null)} />
+                      ) : null}
                     </div>
                   )
                 })}
               </div>
-            </div>
-            <div className="panelBox actionsZone">
-              <div className="actionsRow">
-                <button className="btn subtle">Upgrade Tray</button>
-                <button
-                  className="btn warning"
-                  disabled={gold < REROLL_COST}
-                  onClick={() => {
-                    if (gold < REROLL_COST) return
-                    setGold(g => g - REROLL_COST)
-                    setSelectedShopIndex(null)
-                    setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
-                    setSelectedJudgeShopIndex(null)
-                    setJudgeShopItems(() => pickRandomWithReplacement(PLACEHOLDER_JUDGES, 2))
-                  }}
-                >
-                  Reroll
-                </button>
-              </div>
+              <button
+                className="btn cta fullWidth"
+                disabled={selectedKidOptionIndex == null || hasDraftedKidThisRound}
+                onClick={() => {
+                  if (selectedKidOptionIndex == null) return
+                  handlePickKid(selectedKidOptionIndex)
+                }}
+              >
+                {hasDraftedKidThisRound ? 'Kid Drafted' : 'Pick Selected Kid'}
+              </button>
             </div>
           </div>
           <div className="row foodShop">
@@ -786,22 +792,33 @@ export default function Shop() {
         </section>
 
           <section className="bottomBar">
-            <button
-              className="btn cta"
-              onClick={() => {
-                navigate(SCREENS.BATTLE, { tray, judges })
-              }}
-            >
+            <button className="btn cta" disabled={!hasDraftedKidThisRound} onClick={handleLunchTime}>
               Lunch Time
             </button>
             <button
-              className={`btn ghost ${selectedTrayIndex != null || selectedJudgeIndex != null ? 'hasIndicator' : ''}`}
-              disabled={selectedTrayIndex == null && selectedJudgeIndex == null}
+              className={`btn ghost ${selectedTrayIndex != null ? 'hasIndicator' : ''}`}
+              disabled={selectedTrayIndex == null}
               onClick={handleSell}
             >
               Sell
             </button>
             <button className="btn ghost">Storage</button>
+            <button
+              className="btn warning"
+              disabled={gold < REROLL_COST}
+              onClick={() => {
+                if (gold < REROLL_COST) return
+                setGold(g => g - REROLL_COST)
+                setSelectedShopIndex(null)
+                setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
+                if (!hasDraftedKidThisRound) {
+                  setSelectedKidOptionIndex(null)
+                  setKidOptions(() => pickRandomWithReplacement(PLACEHOLDER_KIDS, 3))
+                }
+              }}
+            >
+              Reroll
+            </button>
           </section>
       </div>
 
@@ -822,9 +839,9 @@ export default function Shop() {
           <div style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}>
             <CardPreview card={activeCard} size={activeSize ? 'fill' : 'shop'} />
           </div>
-        ) : activeJudge ? (
+        ) : activeKid ? (
           <div style={activeSize ? { width: activeSize.width, height: activeSize.height } : undefined}>
-            <JudgePreview judge={activeJudge} size={activeSize ? 'fill' : 'shop'} />
+            <KidPreview kid={activeKid} size={activeSize ? 'fill' : 'shop'} />
           </div>
         ) : null}
       </DragOverlay>

@@ -29,7 +29,7 @@
   background: var(--bg);
   color: var(--text);
   display: grid;
-  grid-template-rows: auto auto minmax(var(--tray-min), 1fr) auto auto; /* topbar, judges, tray, shops, bottom */
+  grid-template-rows: auto auto minmax(var(--tray-min), 1fr) auto auto; /* topbar, lunch line, tray, shops, bottom */
   gap: var(--gap);
 }
 
@@ -52,7 +52,7 @@
 /* Top: stats + selection info */
 /* removed selection info block */
 .stats,
-.judgesSection,
+.lunchLineSection,
 .traySection,
 .shopsSection .row,
 .bottomBar {
@@ -74,8 +74,8 @@
   color: var(--muted);
 }
 
-/* Judges row */
-.judgesSection {
+/* Lunch line row */
+.lunchLineSection {
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 6px;
@@ -86,13 +86,39 @@
   opacity: 0.9;
 }
 .sectionLabel.small { font-size: 12px; }
-.judgeRow {
+.lunchLineRow {
   display: flex;
   gap: var(--gap);
+  min-height: var(--slot-m);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  align-items: center;
 }
-/* compact judges zone */
-.judgesSection { padding: 6px; }
-.judgesSection .slot.circle { width: var(--slot-s); height: var(--slot-s); }
+.lunchLineRow::-webkit-scrollbar {
+  height: 4px;
+}
+.lunchLineRow::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.6);
+  border-radius: 999px;
+}
+.lunchLineRow .slot.circle {
+  flex: 0 0 auto;
+}
+.kidCardWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.kidAddHint {
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: var(--muted);
+}
+.kidAddHint {
+  font-size: 11px;
+  color: var(--muted);
+}
 
 /* Middle: tray + side actions */
 .mid {
@@ -138,12 +164,6 @@
 .trayGrid .square:nth-child(4) { grid-column: 1; grid-row: 2; }
 .trayGrid .rect { grid-column: 2 / span 2; grid-row: 2; }
 
-.sideActions {
-  display: grid;
-  grid-auto-rows: 1fr;
-  gap: var(--gap);
-}
-
 /* Shops */
 .shopsSection {
   display: grid;
@@ -155,26 +175,53 @@
   border-radius: var(--radius);
   padding: 8px;
 }
-.judgeRowWrap {
+.pickKidContent {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  align-items: stretch;
-  gap: var(--gap);
+  gap: 8px;
 }
-.judgeShopBox { width: max-content; min-width: calc(2 * var(--slot-s) + var(--gap) + 16px); }
-.actionsZone .actionsRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+.kidOptionsRow {
+  display: flex;
+  gap: var(--gap);
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.kidOptionWrap {
+  position: relative;
+}
+.kidOptionToken {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 12px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.kidOptionToken .kidOptionCircle {
+  touch-action: none;
+}
+.kidOptionToken.isLocked {
+  cursor: not-allowed;
+}
+.kidOptionToken.isSelected .kidOptionCircle {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+.kidEmoji {
+  font-size: 16px;
+}
+.lunchLineSlot .kidEmoji {
+  font-size: 18px;
+}
+.kidName {
+  font-size: 13px;
+}
 .shopsSection .row {
   display: grid;
   grid-template-rows: auto auto;
   gap: 6px;
 }
-.judgeShop .inner.judgeShopGrid {
-  display: grid;
-  grid-template-columns: auto var(--side-w);
-  gap: var(--gap);
-  align-items: stretch;
-}
-.judgeShop .left { width: max-content; }
 .shopRow {
   display: flex;
   gap: var(--gap);
@@ -225,7 +272,7 @@
 /* Bottom Bar */
 .bottomBar {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr; /* Lunch left, bigger */
+  grid-template-columns: 1.2fr repeat(3, 1fr); /* Lunch left, others equal */
   gap: var(--gap);
 }
 
@@ -241,7 +288,6 @@
 }
 .slot > span { opacity: 0.6; font-size: 14px; }
 .slot.circle { width: var(--slot-m); height: var(--slot-m); border-radius: 999px; }
-.judgeShop .slot.circle { width: var(--slot-s); height: var(--slot-s); }
 .slot.square { width: var(--slot-m); height: var(--slot-m); }
 .foodShop .slot.square { width: var(--slot-s); height: var(--slot-s); }
 .slot.rect { width: calc(var(--slot-m) * 2 + var(--gap)); height: calc(var(--slot-m)); }
@@ -250,10 +296,8 @@
 .trayGrid .slot.square { width: 100%; height: 100%; }
 .trayGrid .slot.rect { width: 100%; height: 100%; }
 
-/* Keep judge/shop rows compact like Food Shop */
-.judgeShopBox .shopRow,
+/* Keep shop rows compact */
 .foodShop .shopRow { align-items: center; }
-.judgeShopBox .sectionLabel,
 .foodShop .sectionLabel { margin-bottom: 2px; }
 
 /* Buttons */
@@ -269,11 +313,26 @@
 .btn.subtle { background: #eef2ff; color: #374151; }
 .btn.warning { background: var(--warning); color: #fff; }
 .btn.cta { background: var(--accent); color: #fff; }
+.btn.fullWidth { width: 100%; }
 
 /* Button indicator: make actionable buttons pop with a red box */
 .btn.ghost.hasIndicator {
   border-color: #ef4444; /* red */
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+.btn.mini {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.kidChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #fff;
+  font-weight: 600;
 }
 
 /* Wider screens (desktop preview) */

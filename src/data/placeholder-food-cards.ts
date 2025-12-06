@@ -14,7 +14,7 @@ export const PLACEHOLDER_CARDS: PlaceholderCard[] = [
   },
   {
     title: 'Burger',
-    description: 'Hearty bite. Comfort food that satisfies picky judges.',
+    description: 'Hearty bite. Comfort food that satisfies picky kids.',
     color: '#f59e0b',
   },
   {

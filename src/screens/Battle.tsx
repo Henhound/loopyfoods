@@ -1,18 +1,20 @@
-import React from 'react'
 import '../styles/shop.css'
 import { useNavigation } from '../app/navigation'
 import type { PlaceholderCard } from '../data/placeholder-food-cards'
+import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 
 type BattleParams = {
   tray?: Array<PlaceholderCard | null>
+  kids?: PlaceholderKid[]
 }
 
 export default function Battle() {
   const { params, back } = useNavigation()
-  const { tray: paramTray } = (params as BattleParams) || {}
+  const { tray: paramTray, kids: paramKids } = (params as BattleParams) || {}
 
   const tray = Array.isArray(paramTray) ? paramTray : Array.from({ length: 5 }, () => null)
   const traySize = tray.length
+  const kids = Array.isArray(paramKids) ? paramKids : []
 
   return (
     <div
@@ -40,7 +42,7 @@ export default function Battle() {
       </div>
 
       <section className="traySection">
-        <div className="sectionLabel">Your Tray</div>
+        <div className="sectionLabel">Hot Lunch Tray</div>
         <div className="trayFit">
           <div className="trayViewport">
             <div className="trayGrid">
@@ -78,7 +80,24 @@ export default function Battle() {
           </div>
         </div>
       </section>
+
+      <section className="lunchLineSection battleLunchLine">
+        <div className="sectionLabel">Lunch Line</div>
+        <div className="lunchLineRow">
+          {kids.length === 0 ? (
+            <div className="emptyLunchLine" role="status">
+              No kids drafted yet.
+            </div>
+          ) : (
+            kids.map((kid, i) => (
+              <div key={`battle-kid-${i}`} className="kidChip">
+                <span className="kidEmoji">{kid.emoji}</span>
+                <span className="kidName">{kid.title}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
     </div>
   )
 }
-
