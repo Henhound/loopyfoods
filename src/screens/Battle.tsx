@@ -91,7 +91,7 @@ export default function Battle() {
           ) : (
             kids.map((kid, i) => (
               <div key={`battle-kid-${i}`} className="kidChip">
-                <span className="kidEmoji">{kid.emoji}</span>
+                <img className="kidChipImg" src={kid.image} alt={kid.title} />
                 <span className="kidName">{kid.title}</span>
               </div>
             ))

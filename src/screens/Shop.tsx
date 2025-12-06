@@ -40,6 +40,19 @@ function pickRandomWithReplacement<T>(source: readonly T[], count: number): T[] 
   return out
 }
 
+function pickRandomUnique<T>(source: readonly T[], count: number): T[] {
+  if (!source.length || count <= 0) return []
+  const pool = [...source]
+  // Fisher-Yates shuffle to avoid duplicates while keeping randomness.
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tmp = pool[i]
+    pool[i] = pool[j]
+    pool[j] = tmp
+  }
+  return pool.slice(0, Math.min(count, pool.length))
+}
+
 function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
   const id = `tray-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
@@ -61,7 +74,7 @@ function LunchLineSlot({ index, children }: { index: number; children?: React.Re
     ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
     : {}
   return (
-    <div ref={setNodeRef} className="slot circle lunchLineSlot" data-index={index} style={style}>
+    <div ref={setNodeRef} className="slot kidRect lunchLineSlot" data-index={index} style={style}>
       {children}
     </div>
   )
@@ -224,13 +237,10 @@ function DraggableKid({
   const style: React.CSSProperties = {
     width: '100%',
     height: '100%',
-    borderRadius: 999,
+    borderRadius: 12,
     border: '1px solid var(--border-color)',
     background: '#fff',
-    color: '#111',
     display: 'grid',
-    placeItems: 'center',
-    fontWeight: 700,
     userSelect: 'none',
     touchAction: 'none',
     cursor: 'grab',
@@ -238,7 +248,7 @@ function DraggableKid({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     outline: selected ? '2px solid var(--accent)' : undefined,
     outlineOffset: selected ? -2 : undefined,
-    fontSize: 18,
+    overflow: 'hidden',
   }
   return (
     <div
@@ -253,9 +263,7 @@ function DraggableKid({
       data-selectable="true"
       data-drag-id={id}
     >
-      <span aria-hidden="true" className="kidEmoji">
-        {kid.emoji}
-      </span>
+      <img className="kidSprite" src={kid.image} alt={kid.title} />
     </div>
   )
 }
@@ -263,22 +271,19 @@ function DraggableKid({
 function KidPreview({ kid, size }: { kid: PlaceholderKid; size: 'shop' | 'fill' }) {
   const dim: React.CSSProperties =
     size === 'shop'
-      ? { width: 'var(--slot-m)', height: 'var(--slot-m)' }
+      ? { width: 'var(--kid-w)', height: 'var(--kid-h)' }
       : { width: '100%', height: '100%' }
   return (
     <div
       style={{
         ...dim,
-        borderRadius: 999,
+        borderRadius: 12,
         background: '#fff',
         border: '1px solid var(--border-color)',
-        display: 'grid',
-        placeItems: 'center',
-        fontWeight: 700,
-        color: '#111',
+        overflow: 'hidden',
       }}
     >
-      <span aria-hidden="true">{kid.emoji}</span>
+      <img className="kidSprite" src={kid.image} alt={kid.title} />
     </div>
   )
 }
@@ -302,16 +307,13 @@ function KidOptionToken({
     disabled: locked,
     data: { kind: 'kid', kid, source: { type: 'kid-option', index } },
   })
-  const circleStyle: React.CSSProperties = {
-    width: 'var(--slot-m)',
-    height: 'var(--slot-m)',
-    borderRadius: 999,
+  const cardStyle: React.CSSProperties = {
+    width: 'var(--kid-w)',
+    height: 'var(--kid-h)',
+    borderRadius: 12,
     border: '1px solid var(--border-color)',
     background: '#fff',
-    color: '#111',
     display: 'grid',
-    placeItems: 'center',
-    fontWeight: 700,
     cursor: locked ? 'not-allowed' : 'grab',
     opacity: locked ? 0.5 : selected ? 1 : 0.95,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -329,15 +331,13 @@ function KidOptionToken({
         {...listeners}
         {...attributes}
         className="kidOptionCircle"
-        style={circleStyle}
+        style={cardStyle}
         role="button"
         aria-label={kid.title}
         aria-pressed={selected ? true : undefined}
         data-drag-id={id}
       >
-        <span aria-hidden="true" className="kidEmoji">
-          {kid.emoji}
-        </span>
+        <img className="kidSprite" src={kid.image} alt={kid.title} />
       </div>
     </div>
   )
@@ -354,7 +354,7 @@ export default function Shop() {
   )
   const [kids, setKids] = React.useState<PlaceholderKid[]>([])
   const [kidOptions, setKidOptions] = React.useState<PlaceholderKid[]>(() =>
-    pickRandomWithReplacement(PLACEHOLDER_KIDS, 3),
+    pickRandomUnique(PLACEHOLDER_KIDS, 3),
   )
   const [hasDraftedKidThisRound, setHasDraftedKidThisRound] = React.useState(false)
   const [round, setRound] = React.useState(1)
@@ -578,7 +578,7 @@ export default function Shop() {
   const handleLunchTime = () => {
     if (!hasDraftedKidThisRound) return
     setRound(r => r + 1)
-    setKidOptions(() => pickRandomWithReplacement(PLACEHOLDER_KIDS, 3))
+    setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
     setSelectedKidOptionIndex(null)
     setHasDraftedKidThisRound(false)
     navigate(SCREENS.BATTLE, { tray, kids })
@@ -832,7 +832,7 @@ export default function Shop() {
                 setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
                 if (!hasDraftedKidThisRound) {
                   setSelectedKidOptionIndex(null)
-                  setKidOptions(() => pickRandomWithReplacement(PLACEHOLDER_KIDS, 3))
+                  setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
                 }
               }}
             >

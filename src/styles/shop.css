@@ -14,6 +14,8 @@
   /* sizing tokens tuned for phones */
   --slot-s: clamp(32px, 10vw, 56px);
   --slot-m: clamp(44px, 14vw, 68px);
+  --kid-w: clamp(78px, 18vw, 118px);
+  --kid-h: calc(var(--kid-w) * 204 / 170);
   --stats-w: clamp(120px, 34vw, 160px);
   --side-w: clamp(90px, 24vw, 120px);
   --tray-min: clamp(220px, 42dvh, 360px);
@@ -92,7 +94,7 @@
 .lunchLineRow {
   display: flex;
   gap: var(--gap);
-  min-height: var(--slot-m);
+  min-height: var(--kid-h);
   overflow-x: auto;
   padding-bottom: 4px;
   align-items: center;
@@ -226,6 +228,7 @@
 }
 .kidOptionToken .kidOptionCircle {
   touch-action: none;
+  overflow: hidden;
 }
 .kidOptionToken.isLocked {
   cursor: not-allowed;
@@ -233,11 +236,18 @@
 .kidOptionToken.isSelected .kidOptionCircle {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
-.kidEmoji {
-  font-size: 16px;
+.kidSprite {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
-.lunchLineSlot .kidEmoji {
-  font-size: 18px;
+.kidChipImg {
+  width: 28px;
+  height: calc(28px * 204 / 170);
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
 }
 .kidName {
   font-size: 13px;
@@ -316,6 +326,7 @@
 .slot.square { width: var(--slot-m); height: var(--slot-m); }
 .foodShop .slot.square { width: var(--slot-s); height: var(--slot-s); }
 .slot.rect { width: calc(var(--slot-m) * 2 + var(--gap)); height: calc(var(--slot-m)); }
+.slot.kidRect { width: var(--kid-w); height: var(--kid-h); border-radius: 12px; }
 
 /* Tray items fill their grid cell to avoid overflow */
 .trayGrid .slot.square { width: 100%; height: 100%; }

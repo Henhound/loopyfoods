@@ -71,3 +71,9 @@ export default defineConfig([
   },
 ])
 ```
+
+## Sprite slicing
+
+- Drop the kids spritesheet at `src/assets/spritesheets/kids.png` (the provided 6x5 grid).
+- Run `npm run sprites:split` to produce `kid-01.png` ... `kid-30.png` in `src/assets/sprites/kids`.
+- The script lives at `tools/split-sprites.mjs` and uses `sharp`; tweak the `config` near the top if the sheet size or grid ever changes.
