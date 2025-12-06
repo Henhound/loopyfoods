@@ -73,6 +73,7 @@ function DraggableCard({
   source,
   hide,
   selected,
+  disabled,
   onClick,
 }: {
   id: string
@@ -80,10 +81,12 @@ function DraggableCard({
   source?: DragFoodSource
   hide?: boolean
   selected?: boolean
+  disabled?: boolean
   onClick?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
+    disabled,
     data: { kind: 'food', card, source },
   })
   const style: React.CSSProperties = {
@@ -98,8 +101,9 @@ function DraggableCard({
     fontWeight: 700,
     userSelect: 'none',
     touchAction: 'none',
-    cursor: 'grab',
-    opacity: hide ? 0 : 1,
+    cursor: disabled ? 'not-allowed' : 'grab',
+    opacity: hide ? 0 : disabled ? 0.55 : 1,
+    pointerEvents: disabled ? 'none' : undefined,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     outline: selected ? '2px solid var(--accent)' : undefined,
     outlineOffset: selected ? -2 : undefined,
@@ -112,8 +116,9 @@ function DraggableCard({
       style={style}
       role="button"
       aria-label={card.title}
+      aria-disabled={disabled || undefined}
       aria-pressed={selected ? true : undefined}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
       data-selectable="true"
       data-drag-id={id}
     >
@@ -364,6 +369,7 @@ export default function Shop() {
   const [selectedTrayIndex, setSelectedTrayIndex] = React.useState<number | null>(null)
   const [selectedKidOptionIndex, setSelectedKidOptionIndex] = React.useState<number | null>(null)
   const [selectedKidIndex, setSelectedKidIndex] = React.useState<number | null>(null)
+  const hasPickedKid = hasDraftedKidThisRound
 
   // Ensure only one thing is selected at a time across all areas
   type Selection =
@@ -455,6 +461,7 @@ export default function Shop() {
   const handleFoodDragEnd = (e: DragEndEvent) => {
     const overId = e.over?.id ? String(e.over.id) : null
     const data = e.active.data.current as DragData | undefined
+    if (!hasPickedKid && data?.source?.type === 'shop') return resetActive()
     if (!overId || data?.kind !== 'food') return resetActive()
 
     const idx = Number(overId.split('-')[1]) - 1
@@ -499,6 +506,7 @@ export default function Shop() {
     if (Number.isNaN(idx) || idx < 0 || idx > kids.length) return resetActive()
 
     if (data.source.type === 'kid') {
+      // Reorder existing kid within lunch line
       const from = data.source.index
       setKids(prev => {
         if (from < 0 || from >= prev.length) return prev
@@ -510,6 +518,7 @@ export default function Shop() {
         return next
       })
     } else if (data.source.type === 'kid-option') {
+      // Draft kid by dropping an option onto the lunch line (append or insert)
       draftKidAt(data.source.index, idx)
     }
 
@@ -524,6 +533,7 @@ export default function Shop() {
   }
 
   const handleSell = () => {
+    if (!hasPickedKid) return
     if (selectedTrayIndex != null) {
       setTray(prev => {
         const next = [...prev]
@@ -539,7 +549,7 @@ export default function Shop() {
   const handleBackgroundMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
     // Ignore clicks on selectable items, their popovers, or bottom controls
-    if (target.closest('[data-selectable="true"], .cardPopover, .bottomBar')) return
+    if (target.closest('[data-selectable="true"], .cardPopover, .bottomBar, .pickKidContent, button')) return
     setSelection(null)
   }
 
@@ -548,6 +558,7 @@ export default function Shop() {
       if (hasDraftedKidThisRound) return
       const kid = kidOptions[optionIndex]
       if (!kid) return
+      // Single-entry draft: place kid at requested position (or append) and lock pick phase
       setKids(prev => {
         const target = Math.max(0, Math.min(insertIndex ?? prev.length, prev.length))
         const next = [...prev]
@@ -647,7 +658,7 @@ export default function Shop() {
       onDragEnd={handleAnyDragEnd}
       onDragCancel={resetActive}
     >
-      <div className="shop" onMouseDown={handleBackgroundMouseDown}>
+      <div className={`shop ${hasPickedKid ? 'kidPicked' : 'kidPicking'}`} onMouseDown={handleBackgroundMouseDown}>
         <div className="topbar">
           <button onClick={back} className="btn ghost">Back</button>
           <div className="miniStats" aria-label="session stats">
@@ -728,44 +739,46 @@ export default function Shop() {
         </section>
 
         <section className="shopsSection">
-          <div className="row pickKid">
-            <div className="sectionLabel small">Pick Kid</div>
-            <div className="pickKidContent">
-              <div className="kidOptionsRow">
-                {kidOptions.map((kid, i) => {
-                  const selected = selectedKidOptionIndex === i
-                  const locked = hasDraftedKidThisRound
-                  return (
-                    <div key={`kid-option-${i}`} className="kidOptionWrap">
-                      <KidOptionToken
-                        kid={kid}
-                        index={i}
-                        selected={selected}
-                        locked={locked}
-                        onClick={() =>
-                          setSelection(selected ? null : { type: 'kid-option', index: i })
-                        }
-                      />
-                      {selected ? (
-                        <CardPopover item={kid} onClose={() => setSelectedKidOptionIndex(null)} />
-                      ) : null}
-                    </div>
-                  )
-                })}
+          {!hasPickedKid ? (
+            <div className="row pickKid">
+              <div className="sectionLabel small">Pick Kid</div>
+              <div className="pickKidContent">
+                <div className="kidOptionsRow">
+                  {kidOptions.map((kid, i) => {
+                    const selected = selectedKidOptionIndex === i
+                    const locked = hasDraftedKidThisRound
+                    return (
+                      <div key={`kid-option-${i}`} className="kidOptionWrap">
+                        <KidOptionToken
+                          kid={kid}
+                          index={i}
+                          selected={selected}
+                          locked={locked}
+                          onClick={() =>
+                            setSelection(selected ? null : { type: 'kid-option', index: i })
+                          }
+                        />
+                        {selected ? (
+                          <CardPopover item={kid} onClose={() => setSelectedKidOptionIndex(null)} />
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+                <button
+                  className="btn cta fullWidth"
+                  disabled={selectedKidOptionIndex == null}
+                  onClick={() => {
+                    if (selectedKidOptionIndex == null) return
+                    handlePickKid(selectedKidOptionIndex)
+                  }}
+                >
+                  {hasDraftedKidThisRound ? 'Kid Drafted' : 'Pick Selected Kid'}
+                </button>
               </div>
-              <button
-                className="btn cta fullWidth"
-                disabled={selectedKidOptionIndex == null || hasDraftedKidThisRound}
-                onClick={() => {
-                  if (selectedKidOptionIndex == null) return
-                  handlePickKid(selectedKidOptionIndex)
-                }}
-              >
-                {hasDraftedKidThisRound ? 'Kid Drafted' : 'Pick Selected Kid'}
-              </button>
             </div>
-          </div>
-          <div className="row foodShop">
+          ) : null}
+          <div className={`row foodShop ${hasPickedKid ? '' : 'isLocked'}`}>
             <div className="sectionLabel small">Food Shop</div>
             <div className="shopRow">
               {shopItems.map((card, i) => {
@@ -779,6 +792,7 @@ export default function Shop() {
                         source={{ type: 'shop', index: i }}
                         hide={activeId === id}
                         selected={selected}
+                        disabled={!hasPickedKid}
                         onClick={() => setSelection(selected ? null : { type: 'shop', index: i })}
                       />
                       {selected ? (
@@ -788,16 +802,21 @@ export default function Shop() {
                 )
               })}
             </div>
+            {!hasPickedKid ? (
+              <div className="shopLockOverlay" aria-hidden="true">
+                Pick a kid to open the shop
+              </div>
+            ) : null}
           </div>
         </section>
 
           <section className="bottomBar">
-            <button className="btn cta" disabled={!hasDraftedKidThisRound} onClick={handleLunchTime}>
+            <button className="btn cta" disabled={!hasPickedKid} onClick={handleLunchTime}>
               Lunch Time
             </button>
             <button
               className={`btn ghost ${selectedTrayIndex != null ? 'hasIndicator' : ''}`}
-              disabled={selectedTrayIndex == null}
+              disabled={!hasPickedKid || selectedTrayIndex == null}
               onClick={handleSell}
             >
               Sell
@@ -805,9 +824,9 @@ export default function Shop() {
             <button className="btn ghost">Storage</button>
             <button
               className="btn warning"
-              disabled={gold < REROLL_COST}
+              disabled={!hasPickedKid || gold < REROLL_COST}
               onClick={() => {
-                if (gold < REROLL_COST) return
+                if (!hasPickedKid || gold < REROLL_COST) return
                 setGold(g => g - REROLL_COST)
                 setSelectedShopIndex(null)
                 setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
