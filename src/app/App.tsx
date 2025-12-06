@@ -1,5 +1,6 @@
 import MainMenu from '../screens/MainMenu'
 import Shop from '../screens/Shop'
+import Battle from '../screens/Battle'
 import { SCREENS } from './screen'
 import { NavigationProvider, useNavigation } from './navigation'
 
@@ -12,6 +13,8 @@ function Screens() {
       return <MainMenu />
     case SCREENS.SHOP:
       return <Shop />
+    case SCREENS.BATTLE:
+      return <Battle />
     default:
       return null
   }

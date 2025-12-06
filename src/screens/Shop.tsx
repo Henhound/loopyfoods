@@ -13,6 +13,7 @@ import {
 import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 
 import { useNavigation } from '../app/navigation'
+import { SCREENS } from '../app/screen'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
 import { PLACEHOLDER_JUDGES, type PlaceholderJudge } from '../data/placeholder-judge-cards'
 
@@ -333,7 +334,7 @@ function JudgePreview({ judge, size }: { judge: PlaceholderJudge; size: 'shop' |
 }
 
 export default function Shop() {
-  const { back } = useNavigation()
+  const { back, navigate } = useNavigation()
 
   const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
     Array.from({ length: TRAY_SIZE }, () => null),
@@ -785,7 +786,14 @@ export default function Shop() {
         </section>
 
           <section className="bottomBar">
-            <button className="btn cta">Lunch Time</button>
+            <button
+              className="btn cta"
+              onClick={() => {
+                navigate(SCREENS.BATTLE, { tray, judges })
+              }}
+            >
+              Lunch Time
+            </button>
             <button
               className={`btn ghost ${selectedTrayIndex != null || selectedJudgeIndex != null ? 'hasIndicator' : ''}`}
               disabled={selectedTrayIndex == null && selectedJudgeIndex == null}

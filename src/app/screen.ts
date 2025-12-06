@@ -4,6 +4,7 @@
 export const SCREENS = {
   MAIN_MENU: 'MAIN_MENU',
   SHOP: 'SHOP',
+  BATTLE: 'BATTLE',
 } as const
 
 // Infer a union type from SCREENS
