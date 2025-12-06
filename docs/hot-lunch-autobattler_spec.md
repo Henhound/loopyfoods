@@ -11,6 +11,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 - Goal: Ship a playable prototype to validate fun before backend work.
 - Tech stack: React + TypeScript + Vite (frontend only). Drag-and-drop in the Shop via @dnd-kit; tap/click selection fallback optional. Navigation is in-memory (NavigationProvider); no URL routing.
 - Kids replace the old "judge" concept. The Lunch Line has unlimited slots and kids can be reordered but never sold or removed.
+- Battle engine: Each round plays 1v1 kid turns in parallel. Each kid gets a fresh tray and eats matching foods (Meat, Starch, Sweet, Veggie, Gross) in slot order; eaten foods trigger abilities and usually grant Star Points. After all kids finish (longer lines keep going alone), the side with more Star Points wins the round.
 - Out of scope (for now): Firebase, accounts, leaderboards, persistence. Opposing players are placeholders for the prototype.
 
 ---
@@ -19,7 +20,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 1. **Main Menu** - shows a "Play Hot Lunch" call-to-action.
 2. **Shop Screen** - buy/sell food cards, arrange the Hot Lunch Tray, and draft exactly one kid into the Lunch Line from the Pick Kid panel each round. Higher-tier foods unlock as rounds progress.
-3. **Battle Screen** - the player is paired with an opponent; the Hot Lunch Tray fires in order and the Lunch Line kids trigger their effects. First to hit their Star Point Target wins.
+3. **Battle Screen** - the player is paired with an opponent; kids take simultaneous 1v1 turns (front-of-line vs. front-of-line). Each kid eats a fresh tray of matching foods (by slot number), triggering abilities and earning Star Points. If one side runs out of kids first, the other side keeps resolving its remaining kids solo. After all kids finish, compare Star Points to decide the round.
 4. **Results** - show win/loss/draw, then return to the Shop for the next round.
 5. **Game End** - player starts with 5 lives. Wins grant a trophy; losses cost a life. Reach 10 trophies to win; lose 5 lives to lose the game.
 
@@ -27,15 +28,16 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 ## 2. Game Overview
 
-- **Food Cards** - Have a shop cost, charge time, category tags, tier, and abilities.
-- **Hot Lunch Tray** - Ordered sequence of foods that activate sequentially. Visualized as a cafeteria tray with numbered compartments indicating activation order. Starts with 5 compartments; tray upgrades are future work and not available in this prototype.
-- **Lunch Line & Kids** - Kids represent cafeteria personalities. The Lunch Line has no slot cap; once drafted, kids stay for the entire run. They can be reordered freely to change their reaction order.
+- **Food Cards** - Have a shop cost, one or more food types, optional category tags, tier, and abilities that fire when eaten.
+- **Food Types** - Meat, Starch, Sweet, Veggie, Gross. Single-type foods are common; dual-type foods are rare and stronger.
+- **Hot Lunch Tray** - Ordered sequence of foods consumed in slot order. Visualized as a cafeteria tray with numbered compartments indicating consumption order. Starts with 5 compartments; tray upgrades are future work and not available in this prototype. A fresh tray is presented for every kid turn.
+- **Lunch Line & Kids** - Kids represent cafeteria personalities. Each kid has one or more preferred food types. The Lunch Line has no slot cap; once drafted, kids stay for the entire run. They can be reordered freely to change the eating sequence.
 - **Card Categories** - Used for certain abilities (e.g., Mexican, Asian, Italian, Fast Food, Delicacy).
-- **Points** - Abilities generate various point flavors (Savory, Sweet, etc.). Certain effects convert those into Star Points.
+- **Star Points** - The only scoring currency during battle. Foods usually award Star Points when eaten; other effects can add, multiply, or deny Star Points.
 - **Abilities**
-  - **Basic** - activate when the food's turn in the tray reaches its charge time (e.g., "+5 Savory Points").
-  - **Triggered** - react to triggers (e.g., "Whenever a Mexican food activates, gain +1 Savory Points").
-- **Kids** - Trigger off specific food activations, point thresholds, or sequencing moments. They excel at converting resource points into Star Points, adjusting win targets, or altering tray behavior.
+  - **On Eat** - trigger when the food is eaten by a kid that matches its type (e.g., "Gain +6 Star Points; if Gross, also give -2 Star Points to the opponent").
+  - **Reactions** - kid or food abilities that trigger when specific foods are eaten or when certain Star Point thresholds are hit.
+- **Kids** - Eat every uneaten tray food that matches their preferred types, in tray slot order. They often add Star Points directly and may buff/debuff later kids or remaining foods.
 
 ---
 
@@ -61,7 +63,7 @@ _(Single source of truth for ChatGPT & dev notes)_
   - **Pick Kid**: Tap a kid token to inspect details and highlight it, then tap the "Pick Selected Kid" button to draft it for free. Alternatively, drag a kid token directly into the Lunch Line to instantly draft and place it. Exactly one kid must be drafted each round before the player can proceed to battle.
   - **Selection fallback**: When a card or kid is selected, `CardPopover` shows title + description. Sell applies only to tray/storage food cards.
 - **Buttons & Indicators**
-  - Gold, round, lives, trophies, star target.
+  - Gold, round, lives, trophies, and current round Star Points for the player (opponent shown in Battle).
   - **Reroll**: Refreshes the Food Shop (and Pick Kid options if you haven't drafted yet). Cost starts at $1 per shop phase, +$1 per additional reroll within the same phase.
   - **Storage**: Reserved for future implementation; button is present but disabled in the prototype.
   - **Lunch Time CTA**: Disabled until a kid is drafted for the current round.
@@ -69,23 +71,22 @@ _(Single source of truth for ChatGPT & dev notes)_
 ### Battle Screen
 
 - Opponent on top, player on bottom. Shows both Hot Lunch Trays and Lunch Lines.
-- Highlight tray activations and kid triggers (placeholder for now). Display point totals plus each side's Star Point Target.
+- Highlight simultaneous kid turns (1v1) and triggered abilities (placeholder for now). Display Star Points for both sides as the round resolves. Visual note: eaten trays can slide off left while a new tray slides in from the right each kid turn.
 
 ---
 
 ## 4. Battle Logic
 
 - Battles auto-play when entering the Battle screen; no mid-battle interactions.
-- **Points & Targets** - Both players start at 0 points with a base Star Point Target of 100. Kid or food effects can raise/lower targets.
-- **Hot Lunch Tray sequencing**
-  - Exactly one food charges at a time, in compartment order.
-  - When a food reaches its charge time, it fires, then the next food begins charging. After the final slot, loop back to the first slot.
-- **Kids**
-  - Each kid in the Lunch Line may trigger on different cues: after specific tray slots resolve, when certain point thresholds are met, or on timer-based cadences.
-  - Kids persist indefinitely; there is no sell mechanic. Reordering the Lunch Line changes their trigger sequence.
-- **Win/Timeout**
-  - Immediate win on hitting or exceeding the current Star Point Target.
-  - If 20 seconds elapse, the higher Star Point total wins; ties result in no trophy gain and no life loss.
+- **Starting state** - Both players start each round at 0 Star Points. Lunch Lines are read left-to-right (front to back). A fresh tray is presented for every kid turn.
+- **Eating loop (simultaneous 1v1 cadence)**
+  - Resolve kids in parallel pairs: front-of-line vs. front-of-line. If one side runs out of kids first, the remaining kids on the other side resolve solo.
+  - At the start of a kid's turn, serve a fresh tray (all foods uneaten). The kid scans the tray from slot 1 onward. For every uneaten food whose type intersects the kid's preferred type(s), the kid eats it. Eating marks the food as consumed for that kid's tray only.
+  - When a food is eaten, its On Eat ability triggers immediately. Foods with multiple types can be eaten by any kid that matches at least one of their types, but they only trigger once per tray when first eaten.
+  - After the kid finishes scanning all slots, resolve any pending triggered effects queued during their eating window, then advance to the next kid pair.
+- **Round end**
+  - The round ends after the last kid on each side has taken a turn. Any foods left uneaten on a kid's personal tray simply do nothing.
+  - The higher Star Point total wins the round. Ties result in no trophy gain and no life loss.
 
 ---
 
