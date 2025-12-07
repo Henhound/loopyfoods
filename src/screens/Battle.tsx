@@ -1,8 +1,10 @@
+import React from 'react'
 import '../styles/shop.css'
 import { useNavigation } from '../app/navigation'
 import type { PlaceholderCard } from '../data/placeholder-food-cards'
 import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 import type { TeamSnapshot } from '../app/teamStorage'
+import { CardPopover } from '../components/CardPopover'
 
 type BattleParams = {
   tray?: Array<PlaceholderCard | null>
@@ -19,6 +21,9 @@ type TrayViewProps = {
   variant?: 'player' | 'opponent'
   framed?: boolean
   starPoints?: number | null
+  selectedIndex?: number | null
+  onSelect?: (index: number) => void
+  renderPopover?: (item: PlaceholderCard, index: number) => React.ReactNode
 }
 
 const trayCardStyle = {
@@ -46,7 +51,16 @@ const trayCardStyle = {
 const calcStarPoints = (cards: Array<PlaceholderCard | null>): number =>
   cards.reduce((sum, card) => sum + (card?.baseStarValue ?? 0), 0)
 
-function TrayView({ label, items, variant = 'player', framed = true, starPoints }: TrayViewProps) {
+function TrayView({
+  label,
+  items,
+  variant = 'player',
+  framed = true,
+  starPoints,
+  selectedIndex,
+  onSelect,
+  renderPopover,
+}: TrayViewProps) {
   const traySize = items.length
   const viewportClass = `trayViewport${variant === 'opponent' ? ' trayThemeOpponent' : ''}`
 
@@ -67,13 +81,26 @@ function TrayView({ label, items, variant = 'player', framed = true, starPoints 
                 const idx = i + 1
                 const item = items[i]
                 const slotCls = `slot ${idx === traySize ? 'rect' : 'square'}`
+                const isSelected = selectedIndex === i
                 return (
                   <div key={idx} className={slotCls} data-index={idx}>
                     {item ? (
                       <div className="trayCardWrap">
-                        <div style={{ ...trayCardStyle, background: item.color }} aria-label={item.title}>
+                        <div
+                          style={{
+                            ...trayCardStyle,
+                            background: item.color,
+                            cursor: onSelect ? 'pointer' : 'default',
+                          }}
+                          aria-label={item.title}
+                          role={onSelect ? 'button' : undefined}
+                          data-selectable={onSelect ? 'true' : undefined}
+                          aria-pressed={isSelected ? true : undefined}
+                          onClick={onSelect ? () => onSelect(i) : undefined}
+                        >
                           {item.title}
                         </div>
+                        {isSelected && renderPopover ? renderPopover(item, i) : null}
                       </div>
                     ) : (
                       <span>{idx}</span>
@@ -95,7 +122,25 @@ function TrayView({ label, items, variant = 'player', framed = true, starPoints 
   return <div className="trayInline">{content}</div>
 }
 
-function OpponentSummary({ snapshot, starPoints }: { snapshot: TeamSnapshot; starPoints: number | null }) {
+function OpponentSummary({
+  snapshot,
+  starPoints,
+  selectedTrayIndex,
+  onTraySelect,
+  renderTrayPopover,
+  selectedKidIndex,
+  onKidSelect,
+  renderKidPopover,
+}: {
+  snapshot: TeamSnapshot
+  starPoints: number | null
+  selectedTrayIndex?: number | null
+  onTraySelect?: (index: number) => void
+  renderTrayPopover?: (item: PlaceholderCard, index: number) => React.ReactNode
+  selectedKidIndex?: number | null
+  onKidSelect?: (index: number) => void
+  renderKidPopover?: (kid: PlaceholderKid, index: number) => React.ReactNode
+}) {
   return (
     <div className="battleOpponent">
       <div className="battleOpponentBody">
@@ -105,6 +150,9 @@ function OpponentSummary({ snapshot, starPoints }: { snapshot: TeamSnapshot; sta
           variant="opponent"
           framed={false}
           starPoints={starPoints ?? calcStarPoints(snapshot.tray)}
+          selectedIndex={selectedTrayIndex}
+          onSelect={onTraySelect}
+          renderPopover={renderTrayPopover}
         />
         <div className="battleOpponentLunchLine">
           <div className="sectionLabel small">Lunch Line</div>
@@ -115,9 +163,18 @@ function OpponentSummary({ snapshot, starPoints }: { snapshot: TeamSnapshot; sta
               </div>
             ) : (
               snapshot.kids.map((kid, i) => (
-                <div key={`opp-kid-${kid.title}-${i}`} className="kidChip">
+                <div
+                  key={`opp-kid-${kid.title}-${i}`}
+                  className="kidChip"
+                  role={onKidSelect ? 'button' : undefined}
+                  data-selectable={onKidSelect ? 'true' : undefined}
+                  aria-pressed={selectedKidIndex === i ? true : undefined}
+                  onClick={onKidSelect ? () => onKidSelect(i) : undefined}
+                  style={{ cursor: onKidSelect ? 'pointer' : 'default' }}
+                >
                   <img className="kidChipImg" src={kid.image} alt={kid.title} />
                   <span className="kidName">{kid.title}</span>
+                  {selectedKidIndex === i && renderKidPopover ? renderKidPopover(kid, i) : null}
                 </div>
               ))
             )}
@@ -132,15 +189,35 @@ function PlayerBoard({
   tray,
   kids,
   starPoints,
+  selectedTrayIndex,
+  onTraySelect,
+  renderTrayPopover,
+  selectedKidIndex,
+  onKidSelect,
+  renderKidPopover,
 }: {
   tray: Array<PlaceholderCard | null>
   kids: PlaceholderKid[]
   starPoints: number
+  selectedTrayIndex?: number | null
+  onTraySelect?: (index: number) => void
+  renderTrayPopover?: (item: PlaceholderCard, index: number) => React.ReactNode
+  selectedKidIndex?: number | null
+  onKidSelect?: (index: number) => void
+  renderKidPopover?: (kid: PlaceholderKid, index: number) => React.ReactNode
 }) {
   return (
     <div className="battlePlayer">
       <div className="battleOpponentBody">
-        <TrayView label="Hot Lunch Tray" items={tray} starPoints={starPoints} framed={false} />
+        <TrayView
+          label="Hot Lunch Tray"
+          items={tray}
+          starPoints={starPoints}
+          framed={false}
+          selectedIndex={selectedTrayIndex}
+          onSelect={onTraySelect}
+          renderPopover={renderTrayPopover}
+        />
         <div className="battleOpponentLunchLine">
           <div className="sectionLabel small">Lunch Line</div>
           <div className="lunchLineRow">
@@ -150,9 +227,18 @@ function PlayerBoard({
               </div>
             ) : (
               kids.map((kid, i) => (
-                <div key={`battle-kid-${i}`} className="kidChip">
+                <div
+                  key={`battle-kid-${i}`}
+                  className="kidChip"
+                  role={onKidSelect ? 'button' : undefined}
+                  data-selectable={onKidSelect ? 'true' : undefined}
+                  aria-pressed={selectedKidIndex === i ? true : undefined}
+                  onClick={onKidSelect ? () => onKidSelect(i) : undefined}
+                  style={{ cursor: onKidSelect ? 'pointer' : 'default' }}
+                >
                   <img className="kidChipImg" src={kid.image} alt={kid.title} />
                   <span className="kidName">{kid.title}</span>
+                  {selectedKidIndex === i && renderKidPopover ? renderKidPopover(kid, i) : null}
                 </div>
               ))
             )}
@@ -185,6 +271,25 @@ export default function Battle() {
   const roundDisplay = playerRound ?? '--'
   const healthDisplay = playerHealth ?? '--'
   const trophiesDisplay = playerTrophies ?? '--'
+  const [selection, setSelection] = React.useState<
+    | { scope: 'player-tray' | 'opponent-tray' | 'player-kid' | 'opponent-kid'; index: number }
+    | null
+  >(null)
+
+  const toggleSelection = React.useCallback(
+    (scope: 'player-tray' | 'opponent-tray' | 'player-kid' | 'opponent-kid', index: number) => {
+      setSelection(prev => (prev && prev.scope === scope && prev.index === index ? null : { scope, index }))
+    },
+    [],
+  )
+
+  const clearSelection = React.useCallback(() => setSelection(null), [])
+
+  const handleBackgroundMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (target.closest('[data-selectable="true"], .cardPopover, button')) return
+    clearSelection()
+  }
 
   return (
     <div
@@ -200,6 +305,7 @@ export default function Battle() {
         flexDirection: 'column',
         gap: 'var(--gap)',
       }}
+      onMouseDown={handleBackgroundMouseDown}
     >
       <div className="topbar">
         <button onClick={back} className="btn ghost">
@@ -223,7 +329,16 @@ export default function Battle() {
       <div className="panelStack">
         <div className="panelBox" style={{ display: 'grid', gap: 10, alignContent: 'start' }}>
           {opponent ? (
-            <OpponentSummary snapshot={opponent} starPoints={opponentStarPoints} />
+            <OpponentSummary
+              snapshot={opponent}
+              starPoints={opponentStarPoints}
+              selectedTrayIndex={selection?.scope === 'opponent-tray' ? selection.index : null}
+              onTraySelect={idx => toggleSelection('opponent-tray', idx)}
+              renderTrayPopover={item => <CardPopover item={item} onClose={clearSelection} />}
+              selectedKidIndex={selection?.scope === 'opponent-kid' ? selection.index : null}
+              onKidSelect={idx => toggleSelection('opponent-kid', idx)}
+              renderKidPopover={kid => <CardPopover item={kid} onClose={clearSelection} />}
+            />
           ) : (
             <div style={{ textAlign: 'center', color: 'var(--muted)' }}>
               No stored opponent yet. Play a round to seed local storage.
@@ -231,7 +346,17 @@ export default function Battle() {
           )}
         </div>
         <div className="panelBox battlePlayerPanel">
-          <PlayerBoard tray={tray} kids={kids} starPoints={playerStarPoints} />
+          <PlayerBoard
+            tray={tray}
+            kids={kids}
+            starPoints={playerStarPoints}
+            selectedTrayIndex={selection?.scope === 'player-tray' ? selection.index : null}
+            onTraySelect={idx => toggleSelection('player-tray', idx)}
+            renderTrayPopover={item => <CardPopover item={item} onClose={clearSelection} />}
+            selectedKidIndex={selection?.scope === 'player-kid' ? selection.index : null}
+            onKidSelect={idx => toggleSelection('player-kid', idx)}
+            renderKidPopover={kid => <CardPopover item={kid} onClose={clearSelection} />}
+          />
         </div>
       </div>
     </div>
