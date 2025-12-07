@@ -383,21 +383,43 @@ function KidOptionToken({
   )
 }
 
-export default function Shop() {
-  const { back, navigate } = useNavigation()
+type ShopParams = {
+  tray?: Array<PlaceholderCard | null>
+  kids?: PlaceholderKid[]
+  round?: number
+  health?: number
+  trophies?: number
+}
 
-  const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
-    Array.from({ length: TRAY_SIZE }, () => null),
+export default function Shop() {
+  const { back, navigate, params } = useNavigation()
+  const {
+    tray: paramTray,
+    kids: paramKids,
+    round: paramRound,
+    health: paramHealth,
+    trophies: paramTrophies,
+  } = (params as ShopParams) || {}
+
+  const initialTray = React.useMemo(
+    () => (Array.isArray(paramTray) ? paramTray : Array.from({ length: TRAY_SIZE }, () => null)),
+    [paramTray],
   )
-  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() => rollShopItems([], 5))
-  const [kids, setKids] = React.useState<PlaceholderKid[]>([])
+  const initialKids = React.useMemo(() => (Array.isArray(paramKids) ? paramKids : []), [paramKids])
+  const initialRound = typeof paramRound === 'number' ? paramRound : 1
+  const initialHealth = typeof paramHealth === 'number' ? paramHealth : MAX_HEALTH
+  const initialTrophies = typeof paramTrophies === 'number' ? paramTrophies : 0
+
+  const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(initialTray)
+  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() => rollShopItems(initialTray, 5))
+  const [kids, setKids] = React.useState<PlaceholderKid[]>(initialKids)
   const [kidOptions, setKidOptions] = React.useState<PlaceholderKid[]>(() =>
     pickRandomUnique(PLACEHOLDER_KIDS, 3),
   )
   const [hasDraftedKidThisRound, setHasDraftedKidThisRound] = React.useState(false)
-  const [round, setRound] = React.useState(1)
-  const [health] = React.useState<number>(MAX_HEALTH)
-  const [trophies] = React.useState<number>(0)
+  const [round, setRound] = React.useState(initialRound)
+  const [health] = React.useState<number>(initialHealth)
+  const [trophies] = React.useState<number>(initialTrophies)
   const [gold, setGold] = React.useState<number>(10)
 
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
