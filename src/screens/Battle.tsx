@@ -56,22 +56,24 @@ export default function Battle() {
                   return (
                     <div key={idx} className={slotCls} data-index={idx}>
                       {item ? (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            borderRadius: 10,
-                            border: '1px solid var(--border-color)',
-                            background: item.color,
-                            color: '#fff',
-                            display: 'grid',
-                            placeItems: 'center',
-                            fontWeight: 700,
-                            userSelect: 'none',
-                          }}
-                          aria-label={item.title}
-                        >
-                          {item.title}
+                        <div className="trayCardWrap">
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: 10,
+                              border: '1px solid var(--border-color)',
+                              background: item.color,
+                              color: '#fff',
+                              display: 'grid',
+                              placeItems: 'center',
+                              fontWeight: 700,
+                              userSelect: 'none',
+                            }}
+                            aria-label={item.title}
+                          >
+                            {item.title}
+                          </div>
                         </div>
                       ) : (
                         <span>{idx}</span>
