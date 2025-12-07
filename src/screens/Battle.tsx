@@ -80,6 +80,7 @@ type BattleLogEntry = {
   stars: number
   slotIndex: number
   kidIndex: number
+  step: number
 }
 
 type LastAction = { team: 'player' | 'opponent'; slotIndex: number; kidIndex: number; step: number }
@@ -197,24 +198,12 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
     case 'STEP': {
       if (state.ended) return state
 
-      const teamOrder: Array<'player' | 'opponent'> =
-        state.nextTeam === 'player' ? ['player', 'opponent'] : ['opponent', 'player']
+      const playerBite = findNextBite(state.player)
+      const opponentBite = findNextBite(state.opponent)
 
-      let chosenTeam: 'player' | 'opponent' | null = null
-      let bite: Bite | null = null
-
-      for (const team of teamOrder) {
-        const candidate = findNextBite(team === 'player' ? state.player : state.opponent)
-        if (candidate) {
-          chosenTeam = team
-          bite = candidate
-          break
-        }
-      }
-
-      if (!bite || !chosenTeam) {
-        const playerDone = state.player.done || !findNextBite(state.player)
-        const opponentDone = state.opponent.done || !findNextBite(state.opponent)
+      if (!playerBite && !opponentBite) {
+        const playerDone = true
+        const opponentDone = true
         const ended = playerDone && opponentDone
         const winner = ended ? computeWinner(state.playerStars, state.opponentStars) : state.winner
         return {
@@ -230,24 +219,46 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
       let opponentState = state.opponent
       let playerStars = state.playerStars
       let opponentStars = state.opponentStars
+      const step = state.step + 1
+      const logEntries: BattleLogEntry[] = []
+      let logId = state.log.length + 1
+      let lastAction: LastAction | null = null
 
-      if (chosenTeam === 'player') {
-        playerState = applyBite(playerState, bite)
-        playerStars += bite.food.baseStarValue
+      if (playerBite) {
+        playerState = applyBite(playerState, playerBite)
+        playerStars += playerBite.food.baseStarValue
+        logEntries.push({
+          id: logId,
+          step,
+          team: 'player',
+          kidTitle: state.player.kids[playerBite.kidIndex]?.title ?? 'Kid',
+          foodTitle: playerBite.food.title,
+          stars: playerBite.food.baseStarValue,
+          slotIndex: playerBite.slotIndex,
+          kidIndex: playerBite.kidIndex,
+        })
+        logId += 1
+        lastAction = { team: 'player', slotIndex: playerBite.slotIndex, kidIndex: playerBite.kidIndex, step }
       } else {
-        opponentState = applyBite(opponentState, bite)
-        opponentStars += bite.food.baseStarValue
+        playerState = { ...playerState, done: true }
       }
 
-      const step = state.step + 1
-      const logEntry: BattleLogEntry = {
-        id: step,
-        team: chosenTeam,
-        kidTitle: (chosenTeam === 'player' ? state.player.kids : state.opponent.kids)[bite.kidIndex]?.title ?? 'Kid',
-        foodTitle: bite.food.title,
-        stars: bite.food.baseStarValue,
-        slotIndex: bite.slotIndex,
-        kidIndex: bite.kidIndex,
+      if (opponentBite) {
+        opponentState = applyBite(opponentState, opponentBite)
+        opponentStars += opponentBite.food.baseStarValue
+        logEntries.push({
+          id: logId,
+          step,
+          team: 'opponent',
+          kidTitle: state.opponent.kids[opponentBite.kidIndex]?.title ?? 'Kid',
+          foodTitle: opponentBite.food.title,
+          stars: opponentBite.food.baseStarValue,
+          slotIndex: opponentBite.slotIndex,
+          kidIndex: opponentBite.kidIndex,
+        })
+        lastAction = { team: 'opponent', slotIndex: opponentBite.slotIndex, kidIndex: opponentBite.kidIndex, step }
+      } else {
+        opponentState = { ...opponentState, done: true }
       }
 
       const playerDone = playerState.done
@@ -255,21 +266,18 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
       const ended = playerDone && opponentDone
       const winner = ended ? computeWinner(playerStars, opponentStars) : null
 
-      const nextTeam: 'player' | 'opponent' =
-        chosenTeam === 'player' ? 'opponent' : 'player'
-
       return {
         ...state,
         player: playerState,
         opponent: opponentState,
         playerStars,
         opponentStars,
-        log: [...state.log, logEntry],
+        log: [...state.log, ...logEntries],
         step,
         ended,
         winner,
-        nextTeam,
-        lastAction: { team: chosenTeam, slotIndex: bite.slotIndex, kidIndex: bite.kidIndex, step },
+        nextTeam: 'player',
+        lastAction,
       }
     }
     case 'RESET':
@@ -728,7 +736,7 @@ export default function Battle() {
                 .reverse()
                 .map(entry => (
                   <li key={entry.id} className={`logItem ${entry.team === 'player' ? 'logPlayer' : 'logOpponent'}`}>
-                    <span className="logStep">#{entry.id}</span>
+                    <span className="logStep">#{entry.step}</span>
                     <span className="logTeam">{entry.team === 'player' ? 'You' : 'Opponent'}</span>
                     <span className="logText">
                       {entry.kidTitle} ate {entry.foodTitle} (+{entry.stars}⭐)
