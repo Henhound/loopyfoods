@@ -631,7 +631,7 @@ export default function Shop() {
     setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
     setSelectedKidOptionIndex(null)
     setHasDraftedKidThisRound(false)
-    navigate(SCREENS.BATTLE, { tray, kids, opponent })
+    navigate(SCREENS.BATTLE, { tray, kids, opponent, round, health, trophies })
   }
 
   function CardPopover({
