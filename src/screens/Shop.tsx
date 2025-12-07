@@ -30,16 +30,6 @@ const FOOD_COST = 3
 const FOOD_SELL_VALUE = 1
 const REROLL_COST = 1
 
-function pickRandomWithReplacement<T>(source: readonly T[], count: number): T[] {
-  const out: T[] = []
-  if (!source.length || count <= 0) return out
-  for (let i = 0; i < count; i++) {
-    const idx = Math.floor(Math.random() * source.length)
-    out.push(source[idx])
-  }
-  return out
-}
-
 function pickRandomUnique<T>(source: readonly T[], count: number): T[] {
   if (!source.length || count <= 0) return []
   const pool = [...source]
@@ -51,6 +41,14 @@ function pickRandomUnique<T>(source: readonly T[], count: number): T[] {
     pool[j] = tmp
   }
   return pool.slice(0, Math.min(count, pool.length))
+}
+
+function rollShopItems(trayItems: Array<PlaceholderCard | null>, count: number): PlaceholderCard[] {
+  const excludedTitles = new Set(
+    trayItems.filter((card): card is PlaceholderCard => Boolean(card)).map(card => card.title),
+  )
+  const available = PLACEHOLDER_CARDS.filter(card => !excludedTitles.has(card.title))
+  return pickRandomUnique(available, count)
 }
 
 function TraySlot({
@@ -387,9 +385,7 @@ export default function Shop() {
   const [tray, setTray] = React.useState<Array<PlaceholderCard | null>>(
     Array.from({ length: TRAY_SIZE }, () => null),
   )
-  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() =>
-    pickRandomWithReplacement(PLACEHOLDER_CARDS, 5),
-  )
+  const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() => rollShopItems([], 5))
   const [kids, setKids] = React.useState<PlaceholderKid[]>([])
   const [kidOptions, setKidOptions] = React.useState<PlaceholderKid[]>(() =>
     pickRandomUnique(PLACEHOLDER_KIDS, 3),
@@ -920,7 +916,7 @@ export default function Shop() {
                 if (!hasPickedKid || gold < REROLL_COST) return
                 setGold(g => g - REROLL_COST)
                 setSelectedShopIndex(null)
-                setShopItems(() => pickRandomWithReplacement(PLACEHOLDER_CARDS, 5))
+                setShopItems(() => rollShopItems(tray, 5))
                 if (!hasDraftedKidThisRound) {
                   setSelectedKidOptionIndex(null)
                   setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
