@@ -103,8 +103,8 @@ function DraggableCard({
     data: { kind: 'food', card, source },
   })
   const style: React.CSSProperties = {
-    width: 'var(--slot-s)',
-    height: 'var(--slot-s)',
+    width: '100%',
+    height: '100%',
     borderRadius: 10,
     border: '1px solid var(--border-color)',
     background: card.color,
@@ -777,37 +777,33 @@ export default function Shop() {
                 </button>
               </div>
             </div>
-          ) : null}
-          <div className={`row foodShop ${hasPickedKid ? '' : 'isLocked'}`}>
-            <div className="sectionLabel small">Food Shop</div>
-            <div className="shopRow">
-              {shopItems.map((card, i) => {
-                const id = `shop-${i}`
-                const selected = selectedShopIndex === i
-                return (
-                  <div key={id} className="shopCardWrap">
-                      <DraggableCard
-                        id={id}
-                        card={card}
-                        source={{ type: 'shop', index: i }}
-                        hide={activeId === id}
-                        selected={selected}
-                        disabled={!hasPickedKid}
-                        onClick={() => setSelection(selected ? null : { type: 'shop', index: i })}
-                      />
-                      {selected ? (
-                        <CardPopover item={card} onClose={() => setSelectedShopIndex(null)} />
-                      ) : null}
-                  </div>
-                )
-              })}
-            </div>
-            {!hasPickedKid ? (
-              <div className="shopLockOverlay" aria-hidden="true">
-                Pick a kid to open the shop
+          ) : (
+            <div className="row foodShop">
+              <div className="sectionLabel small">Food Shop</div>
+              <div className="shopRow">
+                {shopItems.map((card, i) => {
+                  const id = `shop-${i}`
+                  const selected = selectedShopIndex === i
+                  return (
+                    <div key={id} className="shopCardWrap">
+                        <DraggableCard
+                          id={id}
+                          card={card}
+                          source={{ type: 'shop', index: i }}
+                          hide={activeId === id}
+                          selected={selected}
+                          disabled={!hasPickedKid}
+                          onClick={() => setSelection(selected ? null : { type: 'shop', index: i })}
+                        />
+                        {selected ? (
+                          <CardPopover item={card} onClose={() => setSelectedShopIndex(null)} />
+                        ) : null}
+                    </div>
+                  )
+                })}
               </div>
-            ) : null}
-          </div>
+            </div>
+          )}
         </section>
 
           <section className="bottomBar">

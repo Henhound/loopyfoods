@@ -19,7 +19,9 @@ export default function Battle() {
   return (
     <div
       style={{
-        height: '100dvh',
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
         boxSizing: 'border-box',
         padding: 10,
         background: 'var(--bg)',

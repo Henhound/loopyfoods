@@ -5,7 +5,7 @@ import { SCREENS } from '../app/screen'
 export default function MainMenu() {
   const { navigate } = useNavigation()
   return (
-    <div style={{ height: '100dvh', display: 'grid', placeItems: 'center' }}>
+    <div style={{ height: '100%', display: 'grid', placeItems: 'center' }}>
       <button
         onClick={() => navigate(SCREENS.SHOP)}
         style={{

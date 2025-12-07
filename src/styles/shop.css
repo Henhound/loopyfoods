@@ -12,31 +12,48 @@
   --muted: #6b7280;
 
   /* sizing tokens tuned for phones */
-  --slot-s: clamp(32px, 10vw, 56px);
-  --slot-m: clamp(44px, 14vw, 68px);
-  --kid-w: clamp(78px, 18vw, 118px);
+  --slot-s: clamp(30px, 10vw, 52px);
+  --slot-m: clamp(40px, 13vw, 64px);
+  --kid-w: clamp(72px, 17vw, 112px);
   --kid-h: calc(var(--kid-w) * 204 / 170);
-  --stats-w: clamp(120px, 34vw, 160px);
-  --side-w: clamp(90px, 24vw, 120px);
-  --tray-min: clamp(220px, 42dvh, 360px);
-  --tray-max: clamp(260px, 56dvh, 520px);
-  --info-min: clamp(72px, 16dvh, 120px);
+  --kid-line-w: clamp(42px, 13vw, 74px);
+  --kid-line-h: calc(var(--kid-line-w) * 204 / 170);
+  --stats-w: clamp(112px, 30vw, 160px);
+  --side-w: clamp(84px, 22vw, 120px);
+  --tray-min: clamp(190px, 38dvh, 320px);
+  --tray-max: clamp(240px, 52dvh, 460px);
+  --info-min: clamp(68px, 15dvh, 116px);
+}
+
+@media (max-height: 700px) {
+  :root {
+    --slot-s: clamp(26px, 9vw, 48px);
+    --slot-m: clamp(34px, 11vw, 56px);
+    --kid-w: clamp(64px, 16vw, 100px);
+    --kid-h: calc(var(--kid-w) * 204 / 170);
+    --kid-line-w: clamp(38px, 12vw, 68px);
+    --kid-line-h: calc(var(--kid-line-w) * 204 / 170);
+    --tray-min: clamp(160px, 32dvh, 280px);
+    --tray-max: clamp(200px, 44dvh, 360px);
+  }
 }
 
 /* Layout scaffold */
 .shop {
-  height: 100dvh;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 10px;
+  padding: clamp(8px, 2vw, 12px);
   background: var(--bg);
   color: var(--text);
   display: grid;
-  grid-template-rows: auto auto minmax(var(--tray-min), 1fr) auto auto; /* topbar, lunch line, tray, shops, bottom */
+  /* topbar, lunch line, tray fill, shop/pick kid auto, bottom */
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   gap: var(--gap);
+  overflow: hidden;
 }
-.shop.kidPicked {
-  grid-template-rows: auto auto minmax(calc(var(--tray-min) + 60px), 1fr) auto auto;
-}
+.shop.kidPicked { grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
 
 .topbar {
   display: grid;
@@ -84,6 +101,8 @@
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 6px;
+  min-height: 0;
+  height: auto;
 }
 .sectionLabel {
   font-weight: 700;
@@ -94,7 +113,7 @@
 .lunchLineRow {
   display: flex;
   gap: var(--gap);
-  min-height: var(--kid-h);
+  min-height: calc(var(--kid-line-h) + 4px);
   overflow-x: auto;
   padding-bottom: 4px;
   align-items: center;
@@ -141,22 +160,23 @@
   overflow: hidden; /* keep panel clean if rounding causes pixels */
   min-height: 0; /* allow inner to shrink */
 }
-.shop.kidPicked .traySection {
-  min-height: calc(var(--tray-min) + 60px);
-}
 /* Fit box to center the tray and constrain it to available space */
 .trayFit {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 0;
   height: 100%;
+  width: 100%;
 }
 /* The actual tray viewport maintains aspect ratio and never exceeds the panel */
 .trayViewport {
   aspect-ratio: 1.6 / 1; /* cafeteria tray shape */
   width: 100%;
   max-width: 100%;
-  max-height: 100%;
+  height: auto;
+  max-height: min(var(--tray-max), 100%);
+  flex: 0 1 auto;
 }
 .trayGrid {
   display: grid;
@@ -176,15 +196,13 @@
 .shopsSection {
   display: grid;
   gap: var(--gap);
+  min-height: 0;
+  width: 100%;
 }
 .foodShop {
   position: relative;
   overflow: hidden;
-}
-.foodShop.isLocked .shopRow {
-  filter: grayscale(1);
-  opacity: 0.55;
-  pointer-events: none;
+  width: 100%;
 }
 .shopLockOverlay {
   position: absolute;
@@ -212,6 +230,7 @@
   justify-content: center;
   align-items: center;
   flex-wrap: nowrap;
+  min-height: 0;
 }
 .kidOptionWrap {
   position: relative;
@@ -256,17 +275,28 @@
   display: grid;
   grid-template-rows: auto auto;
   gap: 6px;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .shopRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--gap);
-  flex-wrap: nowrap;
-  min-height: var(--slot-s);
-  align-items: center;
+  align-items: stretch;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Shop card selection + popover */
-.shopCardWrap { position: relative; }
+.shopCardWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  min-width: 0;
+}
 .cardPopover {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -327,6 +357,10 @@
 .foodShop .slot.square { width: var(--slot-s); height: var(--slot-s); }
 .slot.rect { width: calc(var(--slot-m) * 2 + var(--gap)); height: calc(var(--slot-m)); }
 .slot.kidRect { width: var(--kid-w); height: var(--kid-h); border-radius: 12px; }
+.lunchLineSlot.slot.kidRect {
+  width: var(--kid-line-w);
+  height: var(--kid-line-h);
+}
 
 /* Tray items fill their grid cell to avoid overflow */
 .trayGrid .slot.square { width: 100%; height: 100%; }
