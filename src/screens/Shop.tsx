@@ -16,6 +16,7 @@ import { useNavigation } from '../app/navigation'
 import { SCREENS } from '../app/screen'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
 import { PLACEHOLDER_KIDS, type KidFoodType, type PlaceholderKid } from '../data/placeholder-kid-cards'
+import { getRandomOpponentSnapshot, saveTeamSnapshot } from '../app/teamStorage'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragKidSource = { type: 'kid'; index: number } | { type: 'kid-option'; index: number }
@@ -24,6 +25,8 @@ type DragData =
   | { kind: 'kid'; kid: PlaceholderKid; source: DragKidSource }
 
 const TRAY_SIZE = 5 as const
+const MAX_HEALTH = 5
+const MAX_TROPHIES = 10
 
 // Simple economy values
 const FOOD_COST = 3
@@ -392,6 +395,8 @@ export default function Shop() {
   )
   const [hasDraftedKidThisRound, setHasDraftedKidThisRound] = React.useState(false)
   const [round, setRound] = React.useState(1)
+  const [health] = React.useState<number>(MAX_HEALTH)
+  const [trophies] = React.useState<number>(0)
   const [gold, setGold] = React.useState<number>(10)
 
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
@@ -614,11 +619,19 @@ export default function Shop() {
 
   const handleLunchTime = () => {
     if (!hasDraftedKidThisRound) return
+    const saved = saveTeamSnapshot({
+      tray,
+      kids,
+      round,
+      health,
+      trophies,
+    })
+    const opponent = getRandomOpponentSnapshot(saved.id)
     setRound(r => r + 1)
     setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
     setSelectedKidOptionIndex(null)
     setHasDraftedKidThisRound(false)
-    navigate(SCREENS.BATTLE, { tray, kids })
+    navigate(SCREENS.BATTLE, { tray, kids, opponent })
   }
 
   function CardPopover({
@@ -745,13 +758,17 @@ export default function Shop() {
               <span className="coinIcon" aria-hidden="true" />
               <span className="statText">{gold}</span>
             </span>
-            <span className="statChip" title="Health" aria-label="Health 2 out of 5">
-              <span aria-hidden="true">❤️</span>
-              <span className="statText">2/5</span>
+            <span className="statChip" title="Health" aria-label={`Health ${health} out of ${MAX_HEALTH}`}>
+              <span aria-hidden="true">HP</span>
+              <span className="statText">
+                {health}/{MAX_HEALTH}
+              </span>
             </span>
-            <span className="statChip" title="Trophies" aria-label="Trophies 3 out of 10">
-              <span aria-hidden="true">🏆</span>
-              <span className="statText">3/10</span>
+            <span className="statChip" title="Trophies" aria-label={`Trophies ${trophies} out of ${MAX_TROPHIES}`}>
+              <span aria-hidden="true">TR</span>
+              <span className="statText">
+                {trophies}/{MAX_TROPHIES}
+              </span>
             </span>
             <span className="statChip" title="Round">
               <span className="statText">Round {round}</span>
