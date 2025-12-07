@@ -71,6 +71,21 @@
   align-items: stretch;
   gap: var(--gap);
 }
+.topbarLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.battleControls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  border: var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+}
 .miniStats {
   display: flex;
   gap: 8px;

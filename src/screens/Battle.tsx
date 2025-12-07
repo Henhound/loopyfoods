@@ -74,9 +74,6 @@ const trayCardStyle = {
   textShadow: '0 1px 2px rgba(0,0,0,0.45), 0 0 4px rgba(0,0,0,0.35)',
 } as const
 
-const calcStarPoints = (cards: Array<PlaceholderCard | null>): number =>
-  cards.reduce((sum, card) => sum + (card?.baseStarValue ?? 0), 0)
-
 function TrayView({
   label,
   items,
@@ -166,7 +163,7 @@ function OpponentSummary({
           items={snapshot.tray}
           variant="opponent"
           framed={false}
-          starPoints={starPoints ?? calcStarPoints(snapshot.tray)}
+          starPoints={starPoints ?? 0}
           selectedIndex={selectedTrayIndex}
           onSelect={onTraySelect}
           renderPopover={renderTrayPopover}
@@ -273,8 +270,8 @@ export default function Battle() {
   const playerRound = typeof paramRound === 'number' ? paramRound : opponent?.round ?? null
   const playerHealth = typeof paramHealth === 'number' ? paramHealth : null
   const playerTrophies = typeof paramTrophies === 'number' ? paramTrophies : opponent?.trophies ?? null
-  const playerStarPoints = calcStarPoints(tray)
-  const opponentStarPoints = opponent ? calcStarPoints(opponent.tray) : null
+  const playerStarPoints = 0
+  const opponentStarPoints = opponent ? 0 : null
   const roundDisplay = playerRound ?? '--'
   const healthDisplay = playerHealth ?? '--'
   const trophiesDisplay = playerTrophies ?? '--'
@@ -315,9 +312,19 @@ export default function Battle() {
       onMouseDown={handleBackgroundMouseDown}
     >
       <div className="topbar">
-        <button onClick={back} className="btn ghost">
-          Back
-        </button>
+        <div className="topbarLeft">
+          <button onClick={back} className="btn ghost">
+            Back
+          </button>
+          <div className="battleControls" aria-label="battle controls">
+            <button type="button" className="btn mini">
+              1 step
+            </button>
+            <button type="button" className="btn mini">
+              Fast forward
+            </button>
+          </div>
+        </div>
         <div className="miniStats" aria-label="battle info">
           <span className="statChip" title="Round">
             <span className="statText">Round {roundDisplay}</span>
