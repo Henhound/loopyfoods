@@ -776,14 +776,15 @@ export default function Shop() {
             <div className="sectionLabel">Hot Lunch Tray</div>
             <div className="trayFit">
               <div className="trayViewport">
-                <div className="trayGrid">
-                  {Array.from({ length: TRAY_SIZE }, (_, i) => {
-                    const idx = i + 1
-                    const item = tray[i]
-                    return (
-                      <TraySlot index={idx} key={idx} canHighlight={activeDragKind === 'food'}>
-                        {item && (
-                          <div className="trayCardWrap">
+                <div className="trayFrame">
+                  <div className="trayGrid">
+                    {Array.from({ length: TRAY_SIZE }, (_, i) => {
+                      const idx = i + 1
+                      const item = tray[i]
+                      return (
+                        <TraySlot index={idx} key={idx} canHighlight={activeDragKind === 'food'}>
+                          {item && (
+                            <div className="trayCardWrap">
                               <TrayItem
                                 index={idx}
                                 card={item}
@@ -798,11 +799,12 @@ export default function Shop() {
                               {selectedTrayIndex === i ? (
                                 <CardPopover item={item} onClose={() => setSelectedTrayIndex(null)} />
                               ) : null}
-                          </div>
-                        )}
-                      </TraySlot>
-                    )
-                  })}
+                            </div>
+                          )}
+                        </TraySlot>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

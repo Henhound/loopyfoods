@@ -47,37 +47,39 @@ export default function Battle() {
         <div className="sectionLabel">Hot Lunch Tray</div>
         <div className="trayFit">
           <div className="trayViewport">
-            <div className="trayGrid">
-              {Array.from({ length: traySize }, (_, i) => {
-                const idx = i + 1
-                const item = tray[i]
-                const slotCls = `slot ${idx === traySize ? 'rect' : 'square'}`
-                return (
-                  <div key={idx} className={slotCls} data-index={idx}>
-                    {item ? (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          borderRadius: 10,
-                          border: '1px solid var(--border-color)',
-                          background: item.color,
-                          color: '#fff',
-                          display: 'grid',
-                          placeItems: 'center',
-                          fontWeight: 700,
-                          userSelect: 'none',
-                        }}
-                        aria-label={item.title}
-                      >
-                        {item.title}
-                      </div>
-                    ) : (
-                      <span>{idx}</span>
-                    )}
-                  </div>
-                )
-              })}
+            <div className="trayFrame">
+              <div className="trayGrid">
+                {Array.from({ length: traySize }, (_, i) => {
+                  const idx = i + 1
+                  const item = tray[i]
+                  const slotCls = `slot ${idx === traySize ? 'rect' : 'square'}`
+                  return (
+                    <div key={idx} className={slotCls} data-index={idx}>
+                      {item ? (
+                        <div
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: 10,
+                            border: '1px solid var(--border-color)',
+                            background: item.color,
+                            color: '#fff',
+                            display: 'grid',
+                            placeItems: 'center',
+                            fontWeight: 700,
+                            userSelect: 'none',
+                          }}
+                          aria-label={item.title}
+                        >
+                          {item.title}
+                        </div>
+                      ) : (
+                        <span>{idx}</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>

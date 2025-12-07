@@ -202,6 +202,20 @@
   height: auto;
   max-height: min(var(--tray-max), 100%);
   flex: 0 1 auto;
+  position: relative;
+  display: grid;
+}
+.trayFrame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: clamp(6px, 1vw, 10px);
+  border: 3px solid var(--accent);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #e8f1ff, #dbeafe);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  box-sizing: border-box;
+  display: grid;
 }
 .trayGrid {
   display: grid;
