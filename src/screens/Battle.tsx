@@ -104,20 +104,22 @@ function alignTeamState(
 ): TeamRuntimeState {
   let kidIndex = startKidIndex
   let slotCursor = startSlotCursor
+  let consumed = state.consumed
 
   while (kidIndex < state.kids.length) {
     const kid = state.kids[kidIndex]
     for (let s = slotCursor; s < state.tray.length; s++) {
       const food = state.tray[s]
-      if (food && !state.consumed[s] && food.foodType === kid.foodType) {
-        return { ...state, kidIndex, slotCursor: s, done: false }
+      if (food && !consumed[s] && food.foodType === kid.foodType) {
+        return { ...state, consumed, kidIndex, slotCursor: s, done: false }
       }
     }
     kidIndex += 1
     slotCursor = 0
+    consumed = Array.from({ length: state.tray.length }, () => false)
   }
 
-  return { ...state, kidIndex, slotCursor: 0, done: true }
+  return { ...state, consumed, kidIndex, slotCursor: 0, done: true }
 }
 
 function createTeamState(tray: Array<PlaceholderCard | null>, kids: PlaceholderKid[]): TeamRuntimeState {
