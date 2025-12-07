@@ -162,7 +162,33 @@ function computeWinner(playerStars: number, opponentStars: number): 'player' | '
   return playerStars > opponentStars ? 'player' : 'opponent'
 }
 
-type BattleAction = { type: 'STEP' }
+function buildInitialBattleState(
+  tray: Array<PlaceholderCard | null>,
+  kids: PlaceholderKid[],
+  opponentTray: Array<PlaceholderCard | null>,
+  opponentKids: PlaceholderKid[],
+  opponent: TeamSnapshot | null,
+): BattleState {
+  const playerState = createTeamState(tray, kids)
+  const opponentState = createTeamState(opponentTray, opponentKids)
+  const ended = playerState.done && opponentState.done
+  const playerStars = 0
+  const opponentStars = opponent ? 0 : 0
+  return {
+    player: playerState,
+    opponent: opponentState,
+    playerStars,
+    opponentStars,
+    log: [],
+    step: 0,
+    ended,
+    winner: ended ? computeWinner(playerStars, opponentStars) : null,
+    nextTeam: 'player',
+    lastAction: null,
+  }
+}
+
+type BattleAction = { type: 'STEP' } | { type: 'RESET'; state: BattleState }
 
 function reduceBattle(state: BattleState, action: BattleAction): BattleState {
   switch (action.type) {
@@ -244,6 +270,8 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
         lastAction: { team: chosenTeam, slotIndex: bite.slotIndex, kidIndex: bite.kidIndex, step },
       }
     }
+    case 'RESET':
+      return action.state
     default:
       return state
   }
@@ -495,23 +523,10 @@ export default function Battle() {
   const healthDisplay = playerHealth ?? '--'
   const trophiesDisplay = playerTrophies ?? '--'
 
-  const initialBattleState = React.useMemo<BattleState>(() => {
-    const playerState = createTeamState(tray, kids)
-    const opponentState = createTeamState(opponentTray, opponentKids)
-    const ended = playerState.done && opponentState.done
-    return {
-      player: playerState,
-      opponent: opponentState,
-      playerStars: 0,
-      opponentStars: opponent ? 0 : 0,
-      log: [],
-      step: 0,
-      ended,
-      winner: ended ? computeWinner(0, opponent ? 0 : 0) : null,
-      nextTeam: 'player',
-      lastAction: null,
-    }
-  }, [kids, opponent, opponentKids, opponentTray, tray])
+  const initialBattleState = React.useMemo<BattleState>(
+    () => buildInitialBattleState(tray, kids, opponentTray, opponentKids, opponent),
+    [kids, opponent, opponentKids, opponentTray, tray],
+  )
 
   const [battleState, dispatch] = React.useReducer(reduceBattle, initialBattleState)
   const [fastForward, setFastForward] = React.useState(false)
@@ -569,6 +584,13 @@ export default function Battle() {
     reset(SCREENS.SHOP, { tray, kids, round: (playerRound ?? 1) + 1, health: playerHealth, trophies: playerTrophies })
   }, [kids, playerHealth, playerRound, playerTrophies, reset, tray])
 
+  const handleResetBattle = React.useCallback(() => {
+    if (fastForwardRef.current) window.clearTimeout(fastForwardRef.current)
+    setFastForward(false)
+    setSelection(null)
+    dispatch({ type: 'RESET', state: buildInitialBattleState(tray, kids, opponentTray, opponentKids, opponent) })
+  }, [kids, opponent, opponentKids, opponentTray, tray])
+
   const playerActiveSlot = battleState.player.done ? null : battleState.player.slotCursor
   const opponentActiveSlot = battleState.opponent.done ? null : battleState.opponent.slotCursor
   const playerActiveKid = battleState.player.done ? null : battleState.player.kidIndex
@@ -616,6 +638,9 @@ export default function Battle() {
               aria-pressed={fastForward}
             >
               {fastForward ? 'Stop' : 'Fast forward'}
+            </button>
+            <button type="button" className="btn mini ghost" onClick={handleResetBattle}>
+              Reset battle
             </button>
           </div>
         </div>
