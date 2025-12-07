@@ -1,4 +1,5 @@
 import React from 'react'
+
 import '../styles/shop.css'
 import { useNavigation } from '../app/navigation'
 import type { PlaceholderCard } from '../data/placeholder-food-cards'
@@ -6,6 +7,7 @@ import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 import type { TeamSnapshot } from '../app/teamStorage'
 import { CardPopover } from '../components/CardPopover'
 
+/* eslint-disable no-unused-vars -- allow named callback parameters inside shared type signatures */
 type BattleParams = {
   tray?: Array<PlaceholderCard | null>
   kids?: PlaceholderKid[]
@@ -22,9 +24,33 @@ type TrayViewProps = {
   framed?: boolean
   starPoints?: number | null
   selectedIndex?: number | null
-  onSelect?: (index: number) => void
-  renderPopover?: (item: PlaceholderCard, index: number) => React.ReactNode
+  onSelect?: (_index: number) => void
+  renderPopover?: (_item: PlaceholderCard, _index: number) => React.ReactNode
 }
+
+type OpponentSummaryProps = {
+  snapshot: TeamSnapshot
+  starPoints: number | null
+  selectedTrayIndex?: number | null
+  onTraySelect?: (_index: number) => void
+  renderTrayPopover?: (_item: PlaceholderCard, _index: number) => React.ReactNode
+  selectedKidIndex?: number | null
+  onKidSelect?: (_index: number) => void
+  renderKidPopover?: (_kid: PlaceholderKid, _index: number) => React.ReactNode
+}
+
+type PlayerBoardProps = {
+  tray: Array<PlaceholderCard | null>
+  kids: PlaceholderKid[]
+  starPoints: number
+  selectedTrayIndex?: number | null
+  onTraySelect?: (_index: number) => void
+  renderTrayPopover?: (_item: PlaceholderCard, _index: number) => React.ReactNode
+  selectedKidIndex?: number | null
+  onKidSelect?: (_index: number) => void
+  renderKidPopover?: (_kid: PlaceholderKid, _index: number) => React.ReactNode
+}
+/* eslint-enable no-unused-vars */
 
 const trayCardStyle = {
   width: '100%',
@@ -131,16 +157,7 @@ function OpponentSummary({
   selectedKidIndex,
   onKidSelect,
   renderKidPopover,
-}: {
-  snapshot: TeamSnapshot
-  starPoints: number | null
-  selectedTrayIndex?: number | null
-  onTraySelect?: (index: number) => void
-  renderTrayPopover?: (item: PlaceholderCard, index: number) => React.ReactNode
-  selectedKidIndex?: number | null
-  onKidSelect?: (index: number) => void
-  renderKidPopover?: (kid: PlaceholderKid, index: number) => React.ReactNode
-}) {
+}: OpponentSummaryProps) {
   return (
     <div className="battleOpponent">
       <div className="battleOpponentBody">
@@ -195,17 +212,7 @@ function PlayerBoard({
   selectedKidIndex,
   onKidSelect,
   renderKidPopover,
-}: {
-  tray: Array<PlaceholderCard | null>
-  kids: PlaceholderKid[]
-  starPoints: number
-  selectedTrayIndex?: number | null
-  onTraySelect?: (index: number) => void
-  renderTrayPopover?: (item: PlaceholderCard, index: number) => React.ReactNode
-  selectedKidIndex?: number | null
-  onKidSelect?: (index: number) => void
-  renderKidPopover?: (kid: PlaceholderKid, index: number) => React.ReactNode
-}) {
+}: PlayerBoardProps) {
   return (
     <div className="battlePlayer">
       <div className="battleOpponentBody">
