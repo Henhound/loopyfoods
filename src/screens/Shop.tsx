@@ -15,7 +15,7 @@ import type { DragEndEvent, DragStartEvent, Modifier } from '@dnd-kit/core'
 import { useNavigation } from '../app/navigation'
 import { SCREENS } from '../app/screen'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
-import { PLACEHOLDER_KIDS, type PlaceholderKid } from '../data/placeholder-kid-cards'
+import { PLACEHOLDER_KIDS, type KidFoodType, type PlaceholderKid } from '../data/placeholder-kid-cards'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragKidSource = { type: 'kid'; index: number } | { type: 'kid-option'; index: number }
@@ -607,7 +607,13 @@ export default function Shop() {
     item,
     onClose,
   }: {
-    item: { title: string; description: string }
+    item: {
+      title: string
+      description?: string
+      foodType?: KidFoodType
+      image?: string
+      baseStarValue?: number
+    }
     onClose: () => void
   }) {
     const ref = React.useRef<HTMLDivElement | null>(null)
@@ -669,36 +675,69 @@ export default function Shop() {
         window.removeEventListener('scroll', place)
       }
     }, [])
+    const foodLabels: Record<KidFoodType, string> = {
+      sweet: 'Sweet',
+      meat: 'Meat',
+      veggie: 'Veggies',
+      starch: 'Starch',
+      gross: 'Gross',
+    }
+    const isKid = 'image' in item
+    const typeLabel = isKid ? 'Likes' : 'Type'
+    const typeText = item.foodType ? `${typeLabel}: ${foodLabels[item.foodType]}` : ''
+    const baseStarText =
+      !isKid && typeof item.baseStarValue === 'number'
+        ? `Base Star Value: ${item.baseStarValue}`
+        : ''
+    const bodyLines =
+      item.description != null && item.description !== ''
+        ? [item.description]
+        : [typeText, baseStarText].filter(Boolean)
     return (
       <div ref={ref} className="cardPopover" role="dialog" aria-label={`${item.title} details`}>
         <div className="cardPopoverHeader">
           <strong className="cardTitle">{item.title}</strong>
           <button className="popoverClose" aria-label="Close" onClick={onClose}>
-            ×
+            &times;
           </button>
         </div>
-        <div className="cardPopoverBody">{item.description}</div>
+        {bodyLines.length ? (
+          <div className="cardPopoverBody">
+            {bodyLines.map((line, idx) => (
+              <div key={idx}>{line}</div>
+            ))}
+          </div>
+        ) : null}
       </div>
     )
   }
-
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
       onDragEnd={handleAnyDragEnd}
-      onDragCancel={resetActive}
+        onDragCancel={resetActive}
     >
       <div className={`shop ${hasPickedKid ? 'kidPicked' : 'kidPicking'}`} onMouseDown={handleBackgroundMouseDown}>
         <div className="topbar">
           <button onClick={back} className="btn ghost">Back</button>
           <div className="miniStats" aria-label="session stats">
-            <span title="Gold">Gold {gold}</span>
-            <span title="Health">Health 2/5</span>
-            <span title="Trophies">Trophies 3/10</span>
-            <span title="Round">Round {round}</span>
-            <span title="Star Target">Target 100</span>
+            <span className="statChip" title="Gold" aria-label={`Gold ${gold}`}>
+              <span className="coinIcon" aria-hidden="true" />
+              <span className="statText">{gold}</span>
+            </span>
+            <span className="statChip" title="Health" aria-label="Health 2 out of 5">
+              <span aria-hidden="true">❤️</span>
+              <span className="statText">2/5</span>
+            </span>
+            <span className="statChip" title="Trophies" aria-label="Trophies 3 out of 10">
+              <span aria-hidden="true">🏆</span>
+              <span className="statText">3/10</span>
+            </span>
+            <span className="statChip" title="Round">
+              <span className="statText">Round {round}</span>
+            </span>
           </div>
         </div>
 
@@ -895,4 +934,5 @@ export default function Shop() {
     </DndContext>
   )
 }
+
 
