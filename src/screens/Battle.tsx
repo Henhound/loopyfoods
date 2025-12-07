@@ -69,6 +69,17 @@ export default function Battle() {
                               placeItems: 'center',
                               fontWeight: 700,
                               userSelect: 'none',
+                              padding: '4px 8px',
+                              boxSizing: 'border-box',
+                              whiteSpace: 'normal',
+                              wordBreak: 'break-word',
+                              textAlign: 'center',
+                              lineHeight: 1.1,
+                              fontSize: 13,
+                              maxWidth: '100%',
+                              maxHeight: '100%',
+                              textShadow:
+                                '0 1px 2px rgba(0,0,0,0.45), 0 0 4px rgba(0,0,0,0.35)',
                             }}
                             aria-label={item.title}
                           >

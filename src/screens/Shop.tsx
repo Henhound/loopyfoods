@@ -136,6 +136,17 @@ function DraggableCard({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     outline: selected ? '2px solid var(--accent)' : undefined,
     outlineOffset: selected ? -2 : undefined,
+    padding: '4px 8px',
+    boxSizing: 'border-box',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    textAlign: 'center',
+    lineHeight: 1.1,
+    fontSize: 13,
+    maxWidth: '100%',
+    maxHeight: '100%',
+    textShadow:
+      '0 1px 2px rgba(0,0,0,0.45), 0 0 4px rgba(0,0,0,0.35)',
   }
   return (
     <div
@@ -212,6 +223,17 @@ function TrayItem({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     outline: selected ? '2px solid var(--accent)' : undefined,
     outlineOffset: selected ? -2 : undefined,
+    padding: '4px 8px',
+    boxSizing: 'border-box',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    textAlign: 'center',
+    lineHeight: 1.1,
+    fontSize: 13,
+    maxWidth: '100%',
+    maxHeight: '100%',
+    textShadow:
+      '0 1px 2px rgba(0,0,0,0.45), 0 0 4px rgba(0,0,0,0.35)',
   }
   return (
     <div
