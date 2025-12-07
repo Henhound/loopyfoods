@@ -53,11 +53,19 @@ function pickRandomUnique<T>(source: readonly T[], count: number): T[] {
   return pool.slice(0, Math.min(count, pool.length))
 }
 
-function TraySlot({ index, children }: { index: number; children?: React.ReactNode }) {
+function TraySlot({
+  index,
+  children,
+  canHighlight,
+}: {
+  index: number
+  children?: React.ReactNode
+  canHighlight: boolean
+}) {
   const id = `tray-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
   const cls = `slot ${index === TRAY_SIZE ? 'rect' : 'square'}`
-  const style: React.CSSProperties = isOver
+  const style: React.CSSProperties = isOver && canHighlight
     ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
     : {}
   return (
@@ -67,10 +75,18 @@ function TraySlot({ index, children }: { index: number; children?: React.ReactNo
   )
 }
 
-function LunchLineSlot({ index, children }: { index: number; children?: React.ReactNode }) {
+function LunchLineSlot({
+  index,
+  children,
+  canHighlight,
+}: {
+  index: number
+  children?: React.ReactNode
+  canHighlight: boolean
+}) {
   const id = `kid-${index}`
   const { setNodeRef, isOver } = useDroppable({ id })
-  const style: React.CSSProperties = isOver
+  const style: React.CSSProperties = isOver && canHighlight
     ? { outline: '2px dashed var(--accent)', outlineOffset: -2 }
     : {}
   return (
@@ -362,6 +378,7 @@ export default function Shop() {
 
   const [activeCard, setActiveCard] = React.useState<PlaceholderCard | null>(null)
   const [activeKid, setActiveKid] = React.useState<PlaceholderKid | null>(null)
+  const [activeDragKind, setActiveDragKind] = React.useState<'food' | 'kid' | null>(null)
   const [activeId, setActiveId] = React.useState<string | null>(null)
   const [activeSize, setActiveSize] = React.useState<{ width: number; height: number } | null>(null)
   const [activeOffset, setActiveOffset] = React.useState<{ x: number; y: number } | null>(null)
@@ -391,6 +408,7 @@ export default function Shop() {
   const resetActive = () => {
     setActiveCard(null)
     setActiveKid(null)
+    setActiveDragKind(null)
     setActiveId(null)
     setActiveSize(null)
     setActiveOffset(null)
@@ -405,6 +423,7 @@ export default function Shop() {
     const data = e.active.data.current as DragData | undefined
     if (data?.kind === 'food' && data.card) setActiveCard(data.card)
     if (data?.kind === 'kid' && data.kid) setActiveKid(data.kid)
+    setActiveDragKind(data?.kind ?? null)
 
     const id = String(e.active.id)
     setActiveId(id)
@@ -602,11 +621,15 @@ export default function Shop() {
         const a = anchor.getBoundingClientRect()
         const popW = el.offsetWidth
         const popH = el.offsetHeight
-        let boundLeft = margin
-        let boundTop = margin
-        let boundRight = window.innerWidth - margin
-        let boundBottom = window.innerHeight - margin
+        const shell = anchor.closest<HTMLElement>('.mobile-shell')
+        const shellRect = shell?.getBoundingClientRect()
+        let boundLeft = shellRect ? shellRect.left + margin : margin
+        let boundTop = shellRect ? shellRect.top + margin : margin
+        let boundRight = shellRect ? shellRect.right - margin : window.innerWidth - margin
+        let boundBottom = shellRect ? shellRect.bottom - margin : window.innerHeight - margin
         const traySection = anchor.closest<HTMLElement>('.traySection')
+        const lunchLineSection = anchor.closest<HTMLElement>('.lunchLineSection')
+        const shopRow = anchor.closest<HTMLElement>('.foodShop')
         if (traySection) {
           const tr = traySection.getBoundingClientRect()
           boundLeft = Math.max(boundLeft, tr.left + margin)
@@ -616,18 +639,27 @@ export default function Shop() {
         }
         const spaceAbove = a.top - boundTop
         const spaceBelow = boundBottom - a.bottom
-        const preferTop = spaceAbove >= popH || spaceAbove >= spaceBelow
-        const sideTop = preferTop
-        const desiredTop = sideTop ? a.top - popH - margin : a.bottom + margin
+        // Lunch line popovers drop below, shop cards bias upward, but flip if space is insufficient.
+        let preferTop = lunchLineSection
+          ? false
+          : shopRow
+            ? true
+            : spaceAbove >= popH || spaceAbove >= spaceBelow
+        if (preferTop && spaceAbove < popH && spaceBelow > spaceAbove) {
+          preferTop = false
+        } else if (!preferTop && spaceBelow < popH && spaceAbove > spaceBelow) {
+          preferTop = true
+        }
+        const desiredTop = preferTop ? a.top - popH - margin : a.bottom + margin
         const desiredLeft = a.left + a.width / 2 - popW / 2
         const topVp = Math.max(boundTop, Math.min(desiredTop, boundBottom - popH))
         const leftVp = Math.max(boundLeft, Math.min(desiredLeft, boundRight - popW))
-        const relTop = topVp - a.top
-        const relLeft = leftVp - a.left
-        el.style.top = `${relTop}px`
-        el.style.left = `${relLeft}px`
+        el.style.top = `${topVp}px`
+        el.style.left = `${leftVp}px`
         el.style.bottom = 'auto'
+        el.style.right = 'auto'
         el.style.transform = 'none'
+        el.style.position = 'fixed'
       }
       place()
       window.addEventListener('resize', place)
@@ -674,7 +706,7 @@ export default function Shop() {
           <div className="sectionLabel">Lunch Line</div>
           <div className="lunchLineRow">
             {kids.map((kid, i) => (
-              <LunchLineSlot index={i} key={`kid-slot-${i}`}>
+              <LunchLineSlot index={i} key={`kid-slot-${i}`} canHighlight={activeDragKind === 'kid'}>
                 <div className="kidCardWrap">
                   <DraggableKid
                     id={`kid-item-${i}`}
@@ -692,7 +724,7 @@ export default function Shop() {
                 </div>
               </LunchLineSlot>
             ))}
-            <LunchLineSlot index={kids.length} key="kid-slot-append">
+            <LunchLineSlot index={kids.length} key="kid-slot-append" canHighlight={activeDragKind === 'kid'}>
               <div className="kidAddHint" aria-hidden="true">
                 {kids.length === 0 ? 'Drop Kid' : '+'}
               </div>
@@ -710,7 +742,7 @@ export default function Shop() {
                     const idx = i + 1
                     const item = tray[i]
                     return (
-                      <TraySlot index={idx} key={idx}>
+                      <TraySlot index={idx} key={idx} canHighlight={activeDragKind === 'food'}>
                         {item && (
                           <div className="trayCardWrap">
                               <TrayItem
@@ -741,7 +773,7 @@ export default function Shop() {
         <section className="shopsSection">
           {!hasPickedKid ? (
             <div className="row pickKid">
-              <div className="sectionLabel small">Pick Kid</div>
+              <div className="sectionLabel small">Add a kid to your Lunch Line.</div>
               <div className="pickKidContent">
                 <div className="kidOptionsRow">
                   {kidOptions.map((kid, i) => {
@@ -773,7 +805,7 @@ export default function Shop() {
                     handlePickKid(selectedKidOptionIndex)
                   }}
                 >
-                  {hasDraftedKidThisRound ? 'Kid Drafted' : 'Pick Selected Kid'}
+                  {hasDraftedKidThisRound ? 'Kid Drafted' : 'Add'}
                 </button>
               </div>
             </div>

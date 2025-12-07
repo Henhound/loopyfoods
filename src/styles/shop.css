@@ -201,7 +201,7 @@
 }
 .foodShop {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 .shopLockOverlay {
@@ -298,10 +298,7 @@
   min-width: 0;
 }
 .cardPopover {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed;
   min-width: 180px;
   max-width: 240px;
   background: var(--panel);
