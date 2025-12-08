@@ -6,139 +6,121 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 ## 0. TL;DR
 
-- Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: chaotic school cafeteria lunch rush. Players assemble a Hot Lunch Tray of foods and line up cafeteria kids who react to the meal.
-- Core loop: Shop -> Arrange -> Draft Kid -> Battle -> Repeat.
-- Goal: Ship a playable prototype to validate fun before backend work.
-- Tech stack: React + TypeScript + Vite (frontend only). Drag-and-drop in the Shop via @dnd-kit; tap/click selection fallback optional. Navigation is in-memory (NavigationProvider); no URL routing.
-- Kids replace the old "judge" concept. The Lunch Line has unlimited slots and kids can be reordered but never sold or removed.
-- Battle engine: Each round plays 1v1 kid turns in parallel. Each kid gets a fresh tray and eats matching foods (Meat, Starch, Sweet, Veggie, Gross) in slot order; eaten foods trigger abilities and usually grant Star Points. After all kids finish (longer lines keep going alone), the side with more Star Points wins the round.
-- Out of scope (for now): Firebase, accounts, leaderboards, persistence. Opposing players are placeholders for the prototype.
+- Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: chaotic school cafeteria lunch rush with a Hot Lunch Tray and a Lunch Line of kids.
+- Core loop: Shop (draft kid first) -> Lunch Time saves a local snapshot and selects an opponent -> Battle (step or fast forward) -> Back to Shop with next-round stats and gold reset.
+- Goal: Ship a playable frontend-only prototype to validate fun before backend work.
+- Tech stack: React + TypeScript + Vite. Drag-and-drop via @dnd-kit; in-memory navigation (`NavigationProvider`) with no URL routing.
+- Lunch Line: Unlimited slots, kids persist for the run, can be reordered, and cannot be sold/removed.
+- Opponents: Pulled from locally saved team snapshots; Team Manager lets you browse/delete/clear these.
+- Battle engine: Simplified star-point eater. Kids eat foods that match their single preferred type on a fresh tray; abilities are stubbed and not yet implemented.
 
 ---
 
 ## 1. Game Flow
 
-1. **Main Menu** - shows a "Play Hot Lunch" call-to-action.
-2. **Shop Screen** - buy/sell food cards, arrange the Hot Lunch Tray, and draft exactly one kid into the Lunch Line from the Pick Kid panel each round. Higher-tier foods unlock as rounds progress.
-3. **Battle Screen** - the player is paired with an opponent; kids take simultaneous 1v1 turns (front-of-line vs. front-of-line). Each kid eats a fresh tray of matching foods (by slot number), triggering abilities and earning Star Points. If one side runs out of kids first, the other side keeps resolving its remaining kids solo. After all kids finish, compare Star Points to decide the round.
-4. **Results** - show win/loss/draw, then return to the Shop for the next round.
-5. **Game End** - player starts with 5 lives. Wins grant a trophy; losses cost a life. Reach 10 trophies to win; lose 5 lives to lose the game.
+1. **Main Menu** - CTA to Play (Shop flow) plus access to the Team Manager.
+2. **Shop** - Start each shop with 10 gold and a fixed 5-slot tray. Draft exactly one kid from 3 options (tap Add or drag into the Lunch Line) before any shopping; this locks kid picks for the round and unlocks the Food Shop/rerolls/Lunch Time. Buy foods for $3 by dragging from the shop into empty tray slots; sell tray foods for $1. Reorder tray foods and kids via drag-and-drop. Reroll costs $1 flat and refreshes the Food Shop (and the kid options only if you haven't drafted yet). Storage button remains disabled.
+3. **Lunch Time / Battle entry** - Pressing Lunch Time saves a local snapshot (tray, kids, round, HP, trophies), selects a random stored opponent (preferring the same round, excluding your new snapshot), and navigates to Battle. If no snapshot exists, the opponent panel is empty.
+4. **Battle** - Step through turns with the "1 step" button or auto-advance with Fast forward (1s cadence); Reset battle rebuilds state from the initial payload. Kids eat fresh trays of matching foods; Star Points display for both sides with a running log.
+5. **Results / Return** - After the battle ends, Back to the shop returns to Shop with round +1, trophies +1 on win (capped at 10), health -1 on loss (floored at 0), and no change on ties. Gold resets to 10 each shop visit.
+6. **Game End** - Player starts with 5 health. Reach 10 trophies to win; hit 0 health to lose. All opponents are local placeholders via snapshots.
 
 ---
 
 ## 2. Game Overview
 
-- **Food Cards** - Have a shop cost, one or more food types, optional category tags, tier, and abilities that fire when eaten.
-- **Food Types** - Meat, Starch, Sweet, Veggie, Gross. Single-type foods are common; dual-type foods are rare and stronger.
-- **Hot Lunch Tray** - Ordered sequence of foods consumed in slot order. Visualized as a cafeteria tray with numbered compartments indicating consumption order. Starts with 5 compartments; tray upgrades are future work and not available in this prototype. A fresh tray is presented for every kid turn.
-- **Lunch Line & Kids** - Kids represent cafeteria personalities. Each kid has one or more preferred food types. The Lunch Line has no slot cap; once drafted, kids stay for the entire run. They can be reordered freely to change the eating sequence.
-- **Card Categories** - Used for certain abilities (e.g., Mexican, Asian, Italian, Fast Food, Delicacy).
-- **Star Points** - The only scoring currency during battle. Foods usually award Star Points when eaten; other effects can add, multiply, or deny Star Points.
-- **Abilities**
-  - **On Eat** - trigger when the food is eaten by a kid that matches its type (e.g., "Gain +6 Star Points; if Gross, also give -2 Star Points to the opponent").
-  - **Reactions** - kid or food abilities that trigger when specific foods are eaten or when certain Star Point thresholds are hit.
-- **Kids** - Eat every uneaten tray food that matches their preferred types, in tray slot order. They often add Star Points directly and may buff/debuff later kids or remaining foods.
+- **Food Cards** - Single-type placeholders with a base Star Point value and a display color. No categories or multi-type foods in this prototype.
+- **Food Types** - Meat, Starch, Sweet, Veggie, Gross.
+- **Hot Lunch Tray** - Fixed 5 slots (4 squares + 1 rectangle). Every kid receives a fresh tray copy; consumption is per-kid.
+- **Lunch Line & Kids** - Kids have one preferred food type. The Lunch Line has no cap, kids persist across rounds, can be reordered freely, and cannot be sold/removed.
+- **Star Points** - Sole scoring currency; eating a food grants its `baseStarValue`. No other effects are implemented yet.
+- **Abilities** - Popovers show placeholder details; on-eat/reaction systems are conceptual only.
 
 ---
 
 ## 3. User Interface
 
-- **Mobile-first** - Playable one-screen experience in vertical orientation. No URL routing required.
-- **Navigation** - In-memory stack via `NavigationProvider` with helpers `navigate`, `replace`, `back`, and `reset`.
-- **Cards** - Small square sprites; tap/click to select. Selections highlight the card and open contextual pop-ups (modal overlays). Pop-ups dismiss via tap outside, a close button, or the Back control.
+- **Navigation** - Mobile-first, single-screen stack using `NavigationProvider` helpers (`navigate`, `replace`, `back`, `reset`); no URL routing.
+- **Cards/Kids** - Small sprites with selection-driven popovers (`CardPopover`); dismiss via outside click/close.
 
 ### Shop Screen
 
 - **Layout**
-  - Top bar with Back + round stats.
-  - **Lunch Line section** shows drafted kids as reorderable circular tokens with a horizontal scroll strip. An empty "Drop Kid" slot is always visible so drag targets remain available even before drafting.
-  - **Hot Lunch Tray** sits beneath, retaining the 3x2 grid layout (four squares + one rectangle) with drag handles for food cards.
-  - **Pick Kid panel** replaces the Judge Shop. It shows 3 random kids every round as compact circular tokens. Players **must** pick exactly one option before "Lunch Time" becomes available. Once a kid is drafted, the other two choices lock until the next round; rerolls only refresh kid options if the player hasn't drafted yet. Kids cannot be sold.
-  - **Food Shop** still displays 5 cards. Storage toggle remains on the roadmap but unimplemented.
+  - Top bar with Back and stats (Gold, HP, Trophies, Round).
+  - **Lunch Line** row of reorderable kid tokens plus a persistent empty drop slot.
+  - **Hot Lunch Tray** fixed grid beneath (3x2 with final rectangle).
+  - **Pick Kid** panel shows 3 random kid options. Draft exactly one per round (tap "Add" or drag into Lunch Line). Once drafted, the panel locks and the Food Shop appears.
+  - **Food Shop** shows 5 cards after drafting. Storage button remains present but disabled.
 - **Interactions**
-  - **Drag-and-drop**
-    - Shop -> Tray: Drag a Food Shop card onto an empty tray slot to buy/place it (deduct gold).
-    - Tray <-> Tray: Drag to swap foods.
-    - Lunch Line reorder: Drag any kid token onto another to swap their order.
-  - **Pick Kid**: Tap a kid token to inspect details and highlight it, then tap the "Pick Selected Kid" button to draft it for free. Alternatively, drag a kid token directly into the Lunch Line to instantly draft and place it. Exactly one kid must be drafted each round before the player can proceed to battle.
-  - **Selection fallback**: When a card or kid is selected, `CardPopover` shows title + description. Sell applies only to tray/storage food cards.
+  - Drag shop food -> empty tray slot to buy (costs $3).
+  - Drag tray food <-> tray food to swap.
+  - Drag kid <-> kid to reorder; drag kid option into Lunch Line to draft/insert.
+  - Food purchasing, reroll, sell, and Lunch Time are disabled until a kid is drafted that round.
 - **Buttons & Indicators**
-  - Gold, round, lives, trophies, and current round Star Points for the player (opponent shown in Battle).
-  - **Reroll**: Refreshes the Food Shop (and Pick Kid options if you haven't drafted yet). Cost starts at $1 per shop phase, +$1 per additional reroll within the same phase.
-  - **Storage**: Reserved for future implementation; button is present but disabled in the prototype.
-  - **Lunch Time CTA**: Disabled until a kid is drafted for the current round.
+  - Lunch Time CTA (enters battle), Sell (selected tray food → +$1), Storage (disabled), Reroll ($1 flat; also refreshes kid options only before drafting).
 
 ### Battle Screen
 
-- Opponent on top, player on bottom. Shows both Hot Lunch Trays and Lunch Lines.
-- Highlight simultaneous kid turns (1v1) and triggered abilities (placeholder for now). Display Star Points for both sides as the round resolves. Visual note: eaten trays can slide off left while a new tray slides in from the right each kid turn.
+- Opponent summary shows their tray, Lunch Line, star points, and consumption highlights; empty state if no snapshot exists.
+- Player board mirrors tray + Lunch Line with active slot/kid highlighting.
+- Controls: Back, 1 step, Fast forward toggle, Reset battle. Mini stats show Round/HP/TR/Fast forward state. Battle log lists bites with step numbers and teams. Back-to-Shop CTA appears when ended.
+
+### Team Manager Screen
+
+- Accessible from Main Menu. Lists saved team snapshots (ID, timestamp, round/HP/TR, tray, kids). Supports per-entry delete, Clear All, and Refresh. CTA back to Shop.
 
 ---
 
 ## 4. Battle Logic
 
-- Battles auto-play when entering the Battle screen; no mid-battle interactions.
-- **Starting state** - Both players start each round at 0 Star Points. Lunch Lines are read left-to-right (front to back). A fresh tray is presented for every kid turn.
-- **Eating loop (simultaneous 1v1 cadence)**
-  - Resolve kids in parallel pairs: front-of-line vs. front-of-line. If one side runs out of kids first, the remaining kids on the other side resolve solo.
-  - At the start of a kid's turn, serve a fresh tray (all foods uneaten). The kid scans the tray from slot 1 onward. For every uneaten food whose type intersects the kid's preferred type(s), the kid eats it. Eating marks the food as consumed for that kid's tray only.
-  - When a food is eaten, its On Eat ability triggers immediately. Foods with multiple types can be eaten by any kid that matches at least one of their types, but they only trigger once per tray when first eaten.
-  - After the kid finishes scanning all slots, resolve any pending triggered effects queued during their eating window, then advance to the next kid pair.
+- Battles auto-prepare on entry; no mid-battle input beyond stepping/fast-forward/reset.
+- **Turn resolution**
+  - Both teams share a step counter. Each step finds the next uneaten matching food for the current kid (foodType equality) on that kid's tray. Each team may take a bite per step.
+  - Eating marks the food consumed for that kid, adds its `baseStarValue` to that team's Star Points, and logs the event. Foods trigger once per kid. After finishing matches, advance to the next kid with a fresh tray (consumption resets between kids).
+  - If a team has no remaining bites, it marks done; the other team may continue solo.
 - **Round end**
-  - The round ends after the last kid on each side has taken a turn. Any foods left uneaten on a kid's personal tray simply do nothing.
-  - The higher Star Point total wins the round. Ties result in no trophy gain and no life loss.
+  - When both teams are done, winner is the higher Star Point total; ties allowed.
+  - Battle screen previews post-round stats; returning to Shop applies win +1 trophy (cap 10), loss -1 health (min 0), tie no change.
 
 ---
 
 ## 5. Economy and Shops
 
-- Starting gold: $10 at the beginning of every shop phase. Unspent gold carries over.
-- Prices (initial, subject to playtesting):
-  - Food cards: $3 baseline; higher tiers may cost more.
-  - Pick Kid: drafting a kid is free but mandatory each round.
-  - Sell value: TBD (e.g., half of purchase cost, rounded down). Only food cards (tray or storage) can be sold.
-- Shop details:
-  - Food Shop shows 5 food cards at a time.
-  - Pick Kid shows 3 kids. Once a kid is drafted, the panel locks until the next round.
-  - Reroll affects the Food Shop plus the Pick Kid options if and only if no kid has been drafted that round.
-  - Storage system (future):
-    - 6-slot Storage accessible via the Storage button on the Shop screen.
-    - Items in Storage persist between battles.
-    - Buy to Storage: Select a shop card, then tap Storage. If there's room, the card moves into Storage.
-    - Tray <-> Storage and Storage <-> Tray swaps follow the same interaction rules as before.
-    - Sell from Storage or Tray to receive sell value.
+- Gold: Always 10 at the start of a Shop visit; no carryover between rounds.
+- Costs: Food $3; Sell returns $1 (tray only); Reroll $1 flat.
+- Kid drafting: Mandatory once per round; drafting is free. Draft before any shopping actions. Kids persist and cannot be sold.
+- Shops: Food Shop shows 5 cards; Pick Kid shows 3 options. Reroll refreshes Food Shop and, only if not drafted yet, the kid options. Storage flow remains future work and is UI-disabled.
 
 ---
 
-## 6. Project Folder Structure
+## 6. Team Snapshots & Opponents
+
+- On Lunch Time, the current team is saved to localStorage (`loopyfoods:teamSnapshots:v1`) with id, timestamp, round, health, trophies, tray, and kids. Up to 30 snapshots are kept (newest first).
+- Opponent selection pulls a random snapshot excluding the current id and preferring the same round; if none exist, the opponent panel is empty and star points remain `--`.
+- Team Manager reads/writes the same storage, allowing delete/clear/refresh. Used for both opponent seeding and player debugging.
+
+---
+
+## 7. Project Folder Structure
 
 ```
-loopyfoods/        # Hot Lunch Autobattler prototype root
-  .git/
-  .gitattributes
-  .gitignore
-  .prettierignore
-  .prettierrc
-  .vscode/
-    settings.json
+loopyfoods/
   docs/
     hot-lunch-autobattler_spec.md
-  eslint.config.js
-  index.html
-  node_modules/
-  package-lock.json
-  package.json
-  README.md
   src/
     App.css
     index.css
     main.tsx
     app/
       App.tsx
-      screen.ts
+      gameConfig.ts
       navigation.tsx
-    assets/
-      react.svg
+      screen.ts
+      teamStorage.ts
+    components/
+      CardPopover.tsx
+      FoodTypeBadge.tsx
+      dnd/
     data/
       placeholder-food-cards.ts
       placeholder-kid-cards.ts
@@ -146,11 +128,8 @@ loopyfoods/        # Hot Lunch Autobattler prototype root
       MainMenu.tsx
       Shop.tsx
       Battle.tsx
+      TeamManager.tsx
     styles/
       globals.css
       shop.css
-  tsconfig.app.json
-  tsconfig.json
-  tsconfig.node.json
-  vite.config.ts
 ```
