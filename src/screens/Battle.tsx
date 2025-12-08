@@ -3,6 +3,7 @@ import React from 'react'
 import '../styles/shop.css'
 import { useNavigation } from '../app/navigation'
 import { SCREENS } from '../app/screen'
+import { MAX_HEALTH, MAX_TROPHIES } from '../app/gameConfig'
 import type { PlaceholderCard } from '../data/placeholder-food-cards'
 import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 import type { TeamSnapshot } from '../app/teamStorage'
@@ -529,9 +530,6 @@ export default function Battle() {
   const playerRound = typeof paramRound === 'number' ? paramRound : opponent?.round ?? null
   const playerHealth = typeof paramHealth === 'number' ? paramHealth : null
   const playerTrophies = typeof paramTrophies === 'number' ? paramTrophies : opponent?.trophies ?? null
-  const roundDisplay = playerRound ?? '--'
-  const healthDisplay = playerHealth ?? '--'
-  const trophiesDisplay = playerTrophies ?? '--'
 
   const initialBattleState = React.useMemo<BattleState>(
     () => buildInitialBattleState(tray, kids, opponentTray, opponentKids, opponent),
@@ -549,6 +547,19 @@ export default function Battle() {
 
   const playerStarPoints = battleState.playerStars
   const opponentStarPoints = opponent ? battleState.opponentStars : null
+  const baseHealth = playerHealth ?? MAX_HEALTH
+  const baseTrophies = playerTrophies ?? 0
+
+  const nextHealth =
+    battleState.ended && battleState.winner === 'opponent' ? Math.max(0, baseHealth - 1) : baseHealth
+  const nextTrophies =
+    battleState.ended && battleState.winner === 'player'
+      ? Math.min(MAX_TROPHIES, baseTrophies + 1)
+      : baseTrophies
+
+  const roundDisplay = playerRound ?? '--'
+  const healthDisplay = playerHealth != null ? nextHealth : '--'
+  const trophiesDisplay = playerTrophies != null ? nextTrophies : '--'
 
   const toggleSelection = React.useCallback(
     (scope: 'player-tray' | 'opponent-tray' | 'player-kid' | 'opponent-kid', index: number) => {
@@ -591,8 +602,14 @@ export default function Battle() {
   )
 
   const handleBackToShop = React.useCallback(() => {
-    reset(SCREENS.SHOP, { tray, kids, round: (playerRound ?? 1) + 1, health: playerHealth, trophies: playerTrophies })
-  }, [kids, playerHealth, playerRound, playerTrophies, reset, tray])
+    reset(SCREENS.SHOP, {
+      tray,
+      kids,
+      round: (playerRound ?? 1) + 1,
+      health: nextHealth,
+      trophies: nextTrophies,
+    })
+  }, [kids, nextHealth, nextTrophies, playerRound, reset, tray])
 
   const handleResetBattle = React.useCallback(() => {
     if (fastForwardRef.current) window.clearTimeout(fastForwardRef.current)

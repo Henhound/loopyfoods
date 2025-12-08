@@ -90,11 +90,13 @@ export function listTeamSnapshots(): TeamSnapshot[] {
   return readSnapshots()
 }
 
-export function getRandomOpponentSnapshot(excludeId?: string): TeamSnapshot | null {
+export function getRandomOpponentSnapshot(targetRound?: number, excludeId?: string): TeamSnapshot | null {
   const pool = readSnapshots().filter(s => s.id !== excludeId)
   if (!pool.length) return null
-  const pick = Math.floor(Math.random() * pool.length)
-  return pool[pick]
+  const roundMatched = typeof targetRound === 'number' ? pool.filter(s => s.round === targetRound) : pool
+  const pickFrom = roundMatched.length ? roundMatched : pool
+  const pick = Math.floor(Math.random() * pickFrom.length)
+  return pickFrom[pick]
 }
 
 export function clearTeamSnapshots() {

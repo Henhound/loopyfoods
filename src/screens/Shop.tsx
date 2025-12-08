@@ -17,6 +17,7 @@ import { SCREENS } from '../app/screen'
 import { PLACEHOLDER_CARDS, type PlaceholderCard } from '../data/placeholder-food-cards'
 import { PLACEHOLDER_KIDS, type PlaceholderKid } from '../data/placeholder-kid-cards'
 import { getRandomOpponentSnapshot, saveTeamSnapshot } from '../app/teamStorage'
+import { MAX_HEALTH, MAX_TROPHIES } from '../app/gameConfig'
 import { CardPopover } from '../components/CardPopover'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
@@ -26,8 +27,6 @@ type DragData =
   | { kind: 'kid'; kid: PlaceholderKid; source: DragKidSource }
 
 const TRAY_SIZE = 5 as const
-const MAX_HEALTH = 5
-const MAX_TROPHIES = 10
 
 // Simple economy values
 const FOOD_COST = 3
@@ -649,7 +648,7 @@ export default function Shop() {
       health,
       trophies,
     })
-    const opponent = getRandomOpponentSnapshot(saved.id)
+    const opponent = getRandomOpponentSnapshot(round, saved.id)
     setRound(r => r + 1)
     setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
     setSelectedKidOptionIndex(null)
