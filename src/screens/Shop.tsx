@@ -20,6 +20,7 @@ import { getRandomOpponentSnapshot, saveTeamSnapshot } from '../app/teamStorage'
 import { MAX_HEALTH, MAX_TROPHIES } from '../app/gameConfig'
 import { CardPopover } from '../components/CardPopover'
 import { FoodStarBadge, FoodTypeBadge } from '../components/FoodTypeBadge'
+import { HeartIcon, TrophyIcon } from '../components/StatIcon'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragKidSource = { type: 'kid'; index: number } | { type: 'kid-option'; index: number }
@@ -771,13 +772,13 @@ export default function Shop() {
               <span className="statText">{gold}</span>
             </span>
             <span className="statChip" title="Health" aria-label={`Health ${health} out of ${MAX_HEALTH}`}>
-              <span aria-hidden="true">HP</span>
+              <HeartIcon />
               <span className="statText">
                 {health}/{MAX_HEALTH}
               </span>
             </span>
             <span className="statChip" title="Trophies" aria-label={`Trophies ${trophies} out of ${MAX_TROPHIES}`}>
-              <span aria-hidden="true">TR</span>
+              <TrophyIcon />
               <span className="statText">
                 {trophies}/{MAX_TROPHIES}
               </span>

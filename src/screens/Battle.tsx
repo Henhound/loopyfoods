@@ -9,6 +9,7 @@ import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 import type { TeamSnapshot } from '../app/teamStorage'
 import { CardPopover } from '../components/CardPopover'
 import { FoodStarBadge, FoodTypeBadge } from '../components/FoodTypeBadge'
+import { HeartIcon, TrophyIcon } from '../components/StatIcon'
 
 /* eslint-disable no-unused-vars -- allow named callback parameters inside shared type signatures */
 type BattleParams = {
@@ -718,45 +719,45 @@ export default function Battle() {
       }}
       onMouseDown={handleBackgroundMouseDown}
     >
-      <div className="topbar">
-        <div className="topbarLeft">
+      <div className="topbar battleTopbar">
+        <div className="battleTopbarRow">
           <button onClick={back} className="btn ghost">
             Back
           </button>
-          <div className="battleControls" aria-label="battle controls">
-            <button type="button" className="btn mini" onClick={handleStep} disabled={battleState.ended}>
-              1 step
-            </button>
-            <button
-              type="button"
-              className="btn mini"
-              onClick={() => setFastForward(ff => !ff)}
-              disabled={battleState.ended}
-              aria-pressed={fastForward}
-            >
-              {fastForward ? 'Stop' : 'Fast forward'}
-            </button>
-            <button type="button" className="btn mini ghost" onClick={handleResetBattle}>
-              Reset battle
-            </button>
+          <div className="miniStats" aria-label="battle info">
+            <span className="statChip" title="Round">
+              <span className="statText">Round {roundDisplay}</span>
+            </span>
+            <span className="statChip" title="Health" aria-label={`Health ${healthDisplay}`}>
+              <HeartIcon />
+              <span className="statText">{healthDisplay}</span>
+            </span>
+            <span className="statChip" title="Trophies" aria-label={`Trophies ${trophiesDisplay}`}>
+              <TrophyIcon />
+              <span className="statText">{trophiesDisplay}</span>
+            </span>
+            <span className="statChip" title="Fast forward state">
+              <span aria-hidden="true">FF</span>
+              <span className="statText">{fastForward && !battleState.ended ? 'On' : 'Off'}</span>
+            </span>
           </div>
         </div>
-        <div className="miniStats" aria-label="battle info">
-          <span className="statChip" title="Round">
-            <span className="statText">Round {roundDisplay}</span>
-          </span>
-          <span className="statChip" title="Health">
-            <span aria-hidden="true">HP</span>
-            <span className="statText">{healthDisplay}</span>
-          </span>
-          <span className="statChip" title="Trophies">
-            <span aria-hidden="true">TR</span>
-            <span className="statText">{trophiesDisplay}</span>
-          </span>
-          <span className="statChip" title="Fast forward state">
-            <span aria-hidden="true">FF</span>
-            <span className="statText">{fastForward && !battleState.ended ? 'On' : 'Off'}</span>
-          </span>
+        <div className="battleControls" aria-label="battle controls">
+          <button type="button" className="btn mini" onClick={handleStep} disabled={battleState.ended}>
+            1 step
+          </button>
+          <button
+            type="button"
+            className="btn mini"
+            onClick={() => setFastForward(ff => !ff)}
+            disabled={battleState.ended}
+            aria-pressed={fastForward}
+          >
+            {fastForward ? 'Stop' : 'Fast forward'}
+          </button>
+          <button type="button" className="btn mini ghost" onClick={handleResetBattle}>
+            Reset battle
+          </button>
         </div>
       </div>
 

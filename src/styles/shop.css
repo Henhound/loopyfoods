@@ -579,6 +579,27 @@
   gap: 6px;
   overflow: hidden;
 }
+.battleTopbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.battleTopbarRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+.battleTopbarRow .miniStats {
+  flex: 1;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.battleTopbarRow .miniStats::-webkit-scrollbar { height: 4px; }
 .battlePlayerPanel {
   display: flex;
   flex-direction: column;
@@ -682,6 +703,14 @@
   box-shadow: 0 0 0 2px var(--accent);
   transform: translateY(-1px);
 }
+.statIcon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  flex: 0 0 16px;
+  vertical-align: middle;
+}
+.statIcon path { display: block; }
 
 /* Wider screens (desktop preview) */
 /* no special overrides needed for removed top block */
