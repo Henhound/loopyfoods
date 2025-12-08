@@ -409,10 +409,10 @@
   align-items: center;
   justify-content: center;
 }
-.foodTypeBadge {
+.foodTypeBadge,
+.foodStarBadge {
   position: absolute;
   top: 4px;
-  right: 4px;
   width: 22px;
   height: 22px;
   display: grid;
@@ -424,6 +424,15 @@
   font-size: 13px;
   line-height: 1;
   pointer-events: none;
+}
+.foodTypeBadge { right: 4px; }
+.foodStarBadge {
+  left: 4px;
+  font-weight: 800;
+  color: #111827;
+  background: #fff7ed;
+  border-color: #fdba74;
+  text-shadow: none;
 }
 .foodTypeBadge.type-sweet { background: #fff0f6; border-color: #f9a8d4; }
 .foodTypeBadge.type-meat { background: #fff4ed; border-color: #fdba74; }

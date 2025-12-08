@@ -19,7 +19,7 @@ import { PLACEHOLDER_KIDS, type PlaceholderKid } from '../data/placeholder-kid-c
 import { getRandomOpponentSnapshot, saveTeamSnapshot } from '../app/teamStorage'
 import { MAX_HEALTH, MAX_TROPHIES } from '../app/gameConfig'
 import { CardPopover } from '../components/CardPopover'
-import { FoodTypeBadge } from '../components/FoodTypeBadge'
+import { FoodStarBadge, FoodTypeBadge } from '../components/FoodTypeBadge'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragKidSource = { type: 'kid'; index: number } | { type: 'kid-option'; index: number }
@@ -166,6 +166,7 @@ function DraggableCard({
       data-drag-id={id}
     >
       {card.title}
+      <FoodStarBadge value={card.baseStarValue} />
       <FoodTypeBadge type={card.foodType} />
     </div>
   )
@@ -190,6 +191,7 @@ function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fi
       }}
     >
       {card.title}
+      <FoodStarBadge value={card.baseStarValue} />
       <FoodTypeBadge type={card.foodType} />
     </div>
   )
@@ -256,6 +258,7 @@ function TrayItem({
       data-drag-id={`tray-item-${index}`}
     >
       {card.title}
+      <FoodStarBadge value={card.baseStarValue} />
       <FoodTypeBadge type={card.foodType} />
     </div>
   )

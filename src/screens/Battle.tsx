@@ -8,7 +8,7 @@ import type { PlaceholderCard } from '../data/placeholder-food-cards'
 import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 import type { TeamSnapshot } from '../app/teamStorage'
 import { CardPopover } from '../components/CardPopover'
-import { FoodTypeBadge } from '../components/FoodTypeBadge'
+import { FoodStarBadge, FoodTypeBadge } from '../components/FoodTypeBadge'
 
 /* eslint-disable no-unused-vars -- allow named callback parameters inside shared type signatures */
 type BattleParams = {
@@ -370,6 +370,7 @@ function TrayView({
                           onClick={onSelect ? () => onSelect(i) : undefined}
                         >
                           {item.title}
+                          <FoodStarBadge value={item.baseStarValue} />
                           <FoodTypeBadge type={item.foodType} />
                         </div>
                         {isSelected && renderPopover ? renderPopover(item, i) : null}

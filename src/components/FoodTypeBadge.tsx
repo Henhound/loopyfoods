@@ -25,3 +25,11 @@ export function FoodTypeBadge({ type }: { type: KidFoodType }) {
     </span>
   )
 }
+
+export function FoodStarBadge({ value }: { value: number }) {
+  return (
+    <span className="foodStarBadge" aria-label={`Base star value ${value}`}>
+      {value}
+    </span>
+  )
+}
