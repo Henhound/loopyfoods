@@ -409,6 +409,36 @@
   align-items: center;
   justify-content: center;
 }
+.foodTypeBadge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: none;
+}
+.foodTypeBadge.type-sweet { background: #fff0f6; border-color: #f9a8d4; }
+.foodTypeBadge.type-meat { background: #fff4ed; border-color: #fdba74; }
+.foodTypeBadge.type-starch { background: #fffbea; border-color: #facc15; }
+.foodTypeBadge.type-veggie { background: #f0fdf4; border-color: #86efac; }
+.foodTypeBadge.type-gross { background: #f3f4f6; border-color: #cbd5e1; }
+.kidChip .foodTypeBadge {
+  top: -6px;
+  right: -6px;
+}
+.kidOptionToken .foodTypeBadge,
+.kidOptionCircle .foodTypeBadge {
+  top: 6px;
+  right: 6px;
+}
 
 /* Bottom Bar */
 .bottomBar {
@@ -637,6 +667,7 @@
   background: #fff;
   font-weight: 600;
   transition: transform 120ms ease, box-shadow 120ms ease;
+  position: relative;
 }
 .kidChip[data-active="true"] {
   box-shadow: 0 0 0 2px var(--accent);

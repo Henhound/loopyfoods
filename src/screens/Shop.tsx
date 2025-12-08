@@ -19,6 +19,7 @@ import { PLACEHOLDER_KIDS, type PlaceholderKid } from '../data/placeholder-kid-c
 import { getRandomOpponentSnapshot, saveTeamSnapshot } from '../app/teamStorage'
 import { MAX_HEALTH, MAX_TROPHIES } from '../app/gameConfig'
 import { CardPopover } from '../components/CardPopover'
+import { FoodTypeBadge } from '../components/FoodTypeBadge'
 
 type DragFoodSource = { type: 'shop'; index: number } | { type: 'tray'; index: number }
 type DragKidSource = { type: 'kid'; index: number } | { type: 'kid-option'; index: number }
@@ -129,6 +130,7 @@ function DraggableCard({
     display: 'grid',
     placeItems: 'center',
     fontWeight: 700,
+    position: 'relative',
     userSelect: 'none',
     touchAction: 'none',
     cursor: disabled ? 'not-allowed' : 'grab',
@@ -164,6 +166,7 @@ function DraggableCard({
       data-drag-id={id}
     >
       {card.title}
+      <FoodTypeBadge type={card.foodType} />
     </div>
   )
 }
@@ -183,9 +186,11 @@ function CardPreview({ card, size }: { card: PlaceholderCard; size: 'shop' | 'fi
         display: 'grid',
         placeItems: 'center',
         fontWeight: 700,
+        position: 'relative',
       }}
     >
       {card.title}
+      <FoodTypeBadge type={card.foodType} />
     </div>
   )
 }
@@ -217,6 +222,7 @@ function TrayItem({
     display: 'grid',
     placeItems: 'center',
     fontWeight: 700,
+    position: 'relative',
     userSelect: 'none',
     touchAction: 'none',
     cursor: 'grab',
@@ -250,6 +256,7 @@ function TrayItem({
       data-drag-id={`tray-item-${index}`}
     >
       {card.title}
+      <FoodTypeBadge type={card.foodType} />
     </div>
   )
 }
@@ -280,6 +287,7 @@ function DraggableKid({
     border: '1px solid var(--border-color)',
     background: '#fff',
     display: 'grid',
+    position: 'relative',
     userSelect: 'none',
     touchAction: 'none',
     cursor: 'grab',
@@ -303,6 +311,7 @@ function DraggableKid({
       data-drag-id={id}
     >
       <img className="kidSprite" src={kid.image} alt={kid.title} />
+      <FoodTypeBadge type={kid.foodType} />
     </div>
   )
 }
@@ -320,9 +329,11 @@ function KidPreview({ kid, size }: { kid: PlaceholderKid; size: 'shop' | 'fill' 
         background: '#fff',
         border: '1px solid var(--border-color)',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
       <img className="kidSprite" src={kid.image} alt={kid.title} />
+      <FoodTypeBadge type={kid.foodType} />
     </div>
   )
 }
@@ -353,6 +364,7 @@ function KidOptionToken({
     border: '1px solid var(--border-color)',
     background: '#fff',
     display: 'grid',
+    position: 'relative',
     cursor: locked ? 'not-allowed' : 'grab',
     opacity: locked ? 0.5 : selected ? 1 : 0.95,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -377,6 +389,7 @@ function KidOptionToken({
         data-drag-id={id}
       >
         <img className="kidSprite" src={kid.image} alt={kid.title} />
+        <FoodTypeBadge type={kid.foodType} />
       </div>
     </div>
   )

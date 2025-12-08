@@ -8,6 +8,7 @@ import type { PlaceholderCard } from '../data/placeholder-food-cards'
 import type { PlaceholderKid } from '../data/placeholder-kid-cards'
 import type { TeamSnapshot } from '../app/teamStorage'
 import { CardPopover } from '../components/CardPopover'
+import { FoodTypeBadge } from '../components/FoodTypeBadge'
 
 /* eslint-disable no-unused-vars -- allow named callback parameters inside shared type signatures */
 type BattleParams = {
@@ -297,6 +298,7 @@ const trayCardStyle = {
   display: 'grid',
   placeItems: 'center',
   fontWeight: 700,
+  position: 'relative',
   userSelect: 'none',
   padding: '4px 8px',
   boxSizing: 'border-box',
@@ -368,6 +370,7 @@ function TrayView({
                           onClick={onSelect ? () => onSelect(i) : undefined}
                         >
                           {item.title}
+                          <FoodTypeBadge type={item.foodType} />
                         </div>
                         {isSelected && renderPopover ? renderPopover(item, i) : null}
                       </div>
@@ -440,6 +443,7 @@ function OpponentSummary({
                 >
                   <img className="kidChipImg" src={kid.image} alt={kid.title} />
                   <span className="kidName">{kid.title}</span>
+                  <FoodTypeBadge type={kid.foodType} />
                   {selectedKidIndex === i && renderKidPopover ? renderKidPopover(kid, i) : null}
                 </div>
               ))
@@ -500,6 +504,7 @@ function PlayerBoard({
                 >
                   <img className="kidChipImg" src={kid.image} alt={kid.title} />
                   <span className="kidName">{kid.title}</span>
+                  <FoodTypeBadge type={kid.foodType} />
                   {selectedKidIndex === i && renderKidPopover ? renderKidPopover(kid, i) : null}
                 </div>
               ))
