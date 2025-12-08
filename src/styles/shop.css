@@ -683,6 +683,62 @@
   padding: 4px 8px;
   font-size: 12px;
 }
+.battleControls .toggleButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border-color: var(--border-color);
+  color: #111827;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+}
+.battleControls .toggleButton .toggleTrack {
+  width: 34px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  box-sizing: border-box;
+  transition: background-color 160ms ease, border-color 160ms ease;
+  flex-shrink: 0;
+}
+.battleControls .toggleButton .toggleThumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #9ca3af;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+.battleControls .toggleButton .toggleCopy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.battleControls .toggleButton .toggleState {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6b7280;
+  text-transform: uppercase;
+}
+.battleControls .toggleButton.isOn {
+  background: #e0ecff;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.16);
+  color: #0f172a;
+}
+.battleControls .toggleButton.isOn .toggleTrack {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+.battleControls .toggleButton.isOn .toggleThumb {
+  transform: translateX(16px);
+  background: #2563eb;
+}
+.battleControls .toggleButton.isOn .toggleState { color: #1d4ed8; }
 .statChip.small {
   padding: 4px 6px;
   font-size: 11px;

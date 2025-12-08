@@ -7,7 +7,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 ## 0. TL;DR
 
 - Game type: Turn-based autobattler inspired by Super Auto Pets, The Bazaar, and Balatro. Theme: chaotic school cafeteria lunch rush with a Hot Lunch Tray and a Lunch Line of kids.
-- Core loop: Shop (draft kid first) -> Lunch Time saves a local snapshot and selects an opponent -> Battle (step or fast forward) -> Back to Shop with next-round stats and gold reset.
+- Core loop: Shop (draft kid first) -> Lunch Time saves a local snapshot and selects an opponent -> Battle (step or Auto) -> Back to Shop with next-round stats and gold reset.
 - Goal: Ship a playable frontend-only prototype to validate fun before backend work.
 - Tech stack: React + TypeScript + Vite. Drag-and-drop via @dnd-kit; in-memory navigation (`NavigationProvider`) with no URL routing.
 - Lunch Line: Unlimited slots, kids persist for the run, can be reordered, and cannot be sold/removed.
@@ -21,7 +21,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 1. **Main Menu** - CTA to Play (Shop flow) plus access to the Team Manager.
 2. **Shop** - Start each shop with 10 gold and a fixed 5-slot tray. Draft exactly one kid from 3 options (tap Add or drag into the Lunch Line) before any shopping; this locks kid picks for the round and unlocks the Food Shop/rerolls/Lunch Time. Buy foods for $3 by dragging from the shop into empty tray slots; sell tray foods for $1. Reorder tray foods and kids via drag-and-drop. Reroll costs $1 flat and refreshes the Food Shop (and the kid options only if you haven't drafted yet). Storage button remains disabled.
 3. **Lunch Time / Battle entry** - Pressing Lunch Time saves a local snapshot (tray, kids, round, HP, trophies), selects a random stored opponent (preferring the same round, excluding your new snapshot), and navigates to Battle. If no snapshot exists, the opponent panel is empty.
-4. **Battle** - Step through turns with the "1 step" button or auto-advance with Fast forward (1s cadence); Reset battle rebuilds state from the initial payload. Kids eat fresh trays of matching foods; Star Points display for both sides with a running log.
+4. **Battle** - Step through turns with the "1 step" button or auto-advance with the Auto toggle (1s cadence); Reset battle rebuilds state from the initial payload. Kids eat fresh trays of matching foods; Star Points display for both sides with a running log.
 5. **Results / Return** - After the battle ends, Back to the shop returns to Shop with round +1, trophies +1 on win (capped at 10), health -1 on loss (floored at 0), and no change on ties. Gold resets to 10 each shop visit.
 6. **Game End** - Player starts with 5 health. Reach 10 trophies to win; hit 0 health to lose. All opponents are local placeholders via snapshots.
 
@@ -63,7 +63,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 - Opponent summary shows their tray, Lunch Line, star points, and consumption highlights; empty state if no snapshot exists.
 - Player board mirrors tray + Lunch Line with active slot/kid highlighting.
-- Controls: Back, 1 step, Fast forward toggle, Reset battle. Mini stats show Round/HP/TR/Fast forward state. Battle log lists bites with step numbers and teams. Back-to-Shop CTA appears when ended.
+- Controls: Back, 1 step, Auto toggle, Reset battle. Mini stats show Round/HP/TR; auto state sits on the toggle button itself. Battle log lists bites with step numbers and teams. Back-to-Shop CTA appears when ended.
 
 ### Team Manager Screen
 
@@ -73,7 +73,7 @@ _(Single source of truth for ChatGPT & dev notes)_
 
 ## 4. Battle Logic
 
-- Battles auto-prepare on entry; no mid-battle input beyond stepping/fast-forward/reset.
+- Battles auto-prepare on entry; no mid-battle input beyond stepping/Auto/reset.
 - **Turn resolution**
   - Both teams share a step counter. Each step finds the next uneaten matching food for the current kid (foodType equality) on that kid's tray. Each team may take a bite per step.
   - Eating marks the food consumed for that kid, adds its `baseStarValue` to that team's Star Points, and logs the event. Foods trigger once per kid. After finishing matches, advance to the next kid with a fresh tray (consumption resets between kids).

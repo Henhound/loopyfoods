@@ -736,10 +736,6 @@ export default function Battle() {
               <TrophyIcon />
               <span className="statText">{trophiesDisplay}</span>
             </span>
-            <span className="statChip" title="Fast forward state">
-              <span aria-hidden="true">FF</span>
-              <span className="statText">{fastForward && !battleState.ended ? 'On' : 'Off'}</span>
-            </span>
           </div>
         </div>
         <div className="battleControls" aria-label="battle controls">
@@ -748,12 +744,15 @@ export default function Battle() {
           </button>
           <button
             type="button"
-            className="btn mini"
+            className={`btn mini toggleButton${fastForward ? ' isOn' : ''}`}
             onClick={() => setFastForward(ff => !ff)}
             disabled={battleState.ended}
             aria-pressed={fastForward}
           >
-            {fastForward ? 'Stop' : 'Fast forward'}
+            <span className="toggleTrack" aria-hidden="true">
+              <span className="toggleThumb" />
+            </span>
+            <span className="toggleCopy">Auto</span>
           </button>
           <button type="button" className="btn mini ghost" onClick={handleResetBattle}>
             Reset battle
