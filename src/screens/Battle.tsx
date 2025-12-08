@@ -580,6 +580,7 @@ export default function Battle() {
 
   const [battleState, dispatch] = React.useReducer(reduceBattle, initialBattleState)
   const [fastForward, setFastForward] = React.useState(false)
+  const [showLog, setShowLog] = React.useState(true)
   const fastForwardRef = React.useRef<number | null>(null)
   const hoverClearRef = React.useRef<number | null>(null)
 
@@ -744,6 +745,17 @@ export default function Battle() {
           </button>
           <button
             type="button"
+            className={`btn mini toggleButton${showLog ? ' isOn' : ''}`}
+            onClick={() => setShowLog(prev => !prev)}
+            aria-pressed={showLog}
+          >
+            <span className="toggleTrack" aria-hidden="true">
+              <span className="toggleThumb" />
+            </span>
+            <span className="toggleCopy">Log</span>
+          </button>
+          <button
+            type="button"
             className={`btn mini toggleButton${fastForward ? ' isOn' : ''}`}
             onClick={() => setFastForward(ff => !ff)}
             disabled={battleState.ended}
@@ -836,40 +848,42 @@ export default function Battle() {
         </div>
       </div>
 
-      <div className="panelBox battleLogBox">
-        <div className="battleLogHeader">
-          <div className="sectionLabel">Battle Log</div>
-          <div className="battleSummary">
-            <span className="statChip small">
-              <span className="statText">You: {playerStarPoints}</span>
-            </span>
-            <span className="statChip small">
-              <span className="statText">Opponent: {opponentStarPoints ?? '--'}</span>
-            </span>
-            {winnerLabel ? <span className="winnerLabel">{winnerLabel}</span> : null}
+      {showLog ? (
+        <div className="panelBox battleLogBox">
+          <div className="battleLogHeader">
+            <div className="sectionLabel">Battle Log</div>
+            <div className="battleSummary">
+              <span className="statChip small">
+                <span className="statText">You: {playerStarPoints}</span>
+              </span>
+              <span className="statChip small">
+                <span className="statText">Opponent: {opponentStarPoints ?? '--'}</span>
+              </span>
+              {winnerLabel ? <span className="winnerLabel">{winnerLabel}</span> : null}
+            </div>
+          </div>
+          <div className="battleLogList" role="log" aria-live="polite">
+            {battleState.log.length === 0 ? (
+              <div className="emptyLog">Step through the battle to see actions.</div>
+            ) : (
+              <ul>
+                {battleState.log
+                  .slice()
+                  .reverse()
+                  .map(entry => (
+                    <li key={entry.id} className={`logItem ${entry.team === 'player' ? 'logPlayer' : 'logOpponent'}`}>
+                      <span className="logStep">#{entry.step}</span>
+                      <span className="logTeam">{entry.team === 'player' ? 'You' : 'Opponent'}</span>
+                      <span className="logText">
+                        {entry.kidTitle} ate {entry.foodTitle} (+{entry.stars}⭐)
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
           </div>
         </div>
-        <div className="battleLogList" role="log" aria-live="polite">
-          {battleState.log.length === 0 ? (
-            <div className="emptyLog">Step through the battle to see actions.</div>
-          ) : (
-            <ul>
-              {battleState.log
-                .slice()
-                .reverse()
-                .map(entry => (
-                  <li key={entry.id} className={`logItem ${entry.team === 'player' ? 'logPlayer' : 'logOpponent'}`}>
-                    <span className="logStep">#{entry.step}</span>
-                    <span className="logTeam">{entry.team === 'player' ? 'You' : 'Opponent'}</span>
-                    <span className="logText">
-                      {entry.kidTitle} ate {entry.foodTitle} (+{entry.stars}⭐)
-                    </span>
-                  </li>
-                ))}
-            </ul>
-          )}
-        </div>
-      </div>
+      ) : null}
 
       {battleState.ended ? (
         <div className="battleFooter">
