@@ -30,6 +30,8 @@ type TrayViewProps = {
   consumedFlags?: boolean[]
   activeSlot?: number | null
   onSelect?: (_index: number) => void
+  onHover?: (_index: number) => void
+  onHoverEnd?: (_index: number) => void
   renderPopover?: (_item: PlaceholderCard, _index: number) => React.ReactNode
 }
 
@@ -40,10 +42,14 @@ type OpponentSummaryProps = {
   consumedTrayFlags?: boolean[]
   activeTraySlot?: number | null
   onTraySelect?: (_index: number) => void
+  onTrayHover?: (_index: number) => void
+  onTrayHoverEnd?: (_index: number) => void
   renderTrayPopover?: (_item: PlaceholderCard, _index: number) => React.ReactNode
   selectedKidIndex?: number | null
   activeKidIndex?: number | null
   onKidSelect?: (_index: number) => void
+  onKidHover?: (_index: number) => void
+  onKidHoverEnd?: (_index: number) => void
   renderKidPopover?: (_kid: PlaceholderKid, _index: number) => React.ReactNode
 }
 
@@ -55,10 +61,14 @@ type PlayerBoardProps = {
   consumedTrayFlags?: boolean[]
   activeTraySlot?: number | null
   onTraySelect?: (_index: number) => void
+  onTrayHover?: (_index: number) => void
+  onTrayHoverEnd?: (_index: number) => void
   renderTrayPopover?: (_item: PlaceholderCard, _index: number) => React.ReactNode
   selectedKidIndex?: number | null
   activeKidIndex?: number | null
   onKidSelect?: (_index: number) => void
+  onKidHover?: (_index: number) => void
+  onKidHoverEnd?: (_index: number) => void
   renderKidPopover?: (_kid: PlaceholderKid, _index: number) => React.ReactNode
 }
 /* eslint-enable no-unused-vars */
@@ -98,6 +108,11 @@ type BattleState = {
   winner: 'player' | 'opponent' | 'tie' | null
   nextTeam: 'player' | 'opponent'
   lastAction: LastAction | null
+}
+
+type SelectionTarget = {
+  scope: 'player-tray' | 'opponent-tray' | 'player-kid' | 'opponent-kid'
+  index: number
 }
 
 function alignTeamState(
@@ -322,6 +337,8 @@ function TrayView({
   consumedFlags,
   activeSlot,
   onSelect,
+  onHover,
+  onHoverEnd,
   renderPopover,
 }: TrayViewProps) {
   const traySize = items.length
@@ -368,6 +385,8 @@ function TrayView({
                           data-selectable={onSelect ? 'true' : undefined}
                           aria-pressed={isSelected ? true : undefined}
                           onClick={onSelect ? () => onSelect(i) : undefined}
+                          onMouseEnter={onHover ? () => onHover(i) : undefined}
+                          onMouseLeave={onHoverEnd ? () => onHoverEnd(i) : undefined}
                         >
                           {item.title}
                           <FoodStarBadge value={item.baseStarValue} />
@@ -402,10 +421,14 @@ function OpponentSummary({
   consumedTrayFlags,
   activeTraySlot,
   onTraySelect,
+  onTrayHover,
+  onTrayHoverEnd,
   renderTrayPopover,
   selectedKidIndex,
   activeKidIndex,
   onKidSelect,
+  onKidHover,
+  onKidHoverEnd,
   renderKidPopover,
 }: OpponentSummaryProps) {
   return (
@@ -421,6 +444,8 @@ function OpponentSummary({
           consumedFlags={consumedTrayFlags}
           activeSlot={activeTraySlot}
           onSelect={onTraySelect}
+          onHover={onTrayHover}
+          onHoverEnd={onTrayHoverEnd}
           renderPopover={renderTrayPopover}
         />
         <div className="battleOpponentLunchLine">
@@ -441,6 +466,8 @@ function OpponentSummary({
                   aria-pressed={selectedKidIndex === i ? true : undefined}
                   onClick={onKidSelect ? () => onKidSelect(i) : undefined}
                   style={{ cursor: onKidSelect ? 'pointer' : 'default' }}
+                  onMouseEnter={onKidHover ? () => onKidHover(i) : undefined}
+                  onMouseLeave={onKidHoverEnd ? () => onKidHoverEnd(i) : undefined}
                 >
                   <img className="kidChipImg" src={kid.image} alt={kid.title} />
                   <span className="kidName">{kid.title}</span>
@@ -464,10 +491,14 @@ function PlayerBoard({
   consumedTrayFlags,
   activeTraySlot,
   onTraySelect,
+  onTrayHover,
+  onTrayHoverEnd,
   renderTrayPopover,
   selectedKidIndex,
   activeKidIndex,
   onKidSelect,
+  onKidHover,
+  onKidHoverEnd,
   renderKidPopover,
 }: PlayerBoardProps) {
   return (
@@ -482,6 +513,8 @@ function PlayerBoard({
           consumedFlags={consumedTrayFlags}
           activeSlot={activeTraySlot}
           onSelect={onTraySelect}
+          onHover={onTrayHover}
+          onHoverEnd={onTrayHoverEnd}
           renderPopover={renderTrayPopover}
         />
         <div className="battleOpponentLunchLine">
@@ -502,6 +535,8 @@ function PlayerBoard({
                   aria-pressed={selectedKidIndex === i ? true : undefined}
                   onClick={onKidSelect ? () => onKidSelect(i) : undefined}
                   style={{ cursor: onKidSelect ? 'pointer' : 'default' }}
+                  onMouseEnter={onKidHover ? () => onKidHover(i) : undefined}
+                  onMouseLeave={onKidHoverEnd ? () => onKidHoverEnd(i) : undefined}
                 >
                   <img className="kidChipImg" src={kid.image} alt={kid.title} />
                   <span className="kidName">{kid.title}</span>
@@ -545,11 +580,11 @@ export default function Battle() {
   const [battleState, dispatch] = React.useReducer(reduceBattle, initialBattleState)
   const [fastForward, setFastForward] = React.useState(false)
   const fastForwardRef = React.useRef<number | null>(null)
+  const hoverClearRef = React.useRef<number | null>(null)
 
-  const [selection, setSelection] = React.useState<
-    | { scope: 'player-tray' | 'opponent-tray' | 'player-kid' | 'opponent-kid'; index: number }
-    | null
-  >(null)
+  const [pinnedSelection, setPinnedSelection] = React.useState<SelectionTarget | null>(null)
+  const [hoverSelection, setHoverSelection] = React.useState<SelectionTarget | null>(null)
+  const selection = hoverSelection ?? pinnedSelection
 
   const playerStarPoints = battleState.playerStars
   const opponentStarPoints = opponent ? battleState.opponentStars : null
@@ -567,14 +602,42 @@ export default function Battle() {
   const healthDisplay = playerHealth != null ? nextHealth : '--'
   const trophiesDisplay = playerTrophies != null ? nextTrophies : '--'
 
+  const cancelHoverClear = React.useCallback(() => {
+    if (hoverClearRef.current) {
+      window.clearTimeout(hoverClearRef.current)
+      hoverClearRef.current = null
+    }
+  }, [])
+
   const toggleSelection = React.useCallback(
     (scope: 'player-tray' | 'opponent-tray' | 'player-kid' | 'opponent-kid', index: number) => {
-      setSelection(prev => (prev && prev.scope === scope && prev.index === index ? null : { scope, index }))
+      setPinnedSelection(prev => (prev && prev.scope === scope && prev.index === index ? null : { scope, index }))
+      setHoverSelection(null)
     },
     [],
   )
 
-  const clearSelection = React.useCallback(() => setSelection(null), [])
+  const clearSelection = React.useCallback(() => {
+    cancelHoverClear()
+    setPinnedSelection(null)
+    setHoverSelection(null)
+  }, [cancelHoverClear])
+
+  const handleHoverSelection = React.useCallback(
+    (scope: SelectionTarget['scope'], index: number) => {
+      cancelHoverClear()
+      setHoverSelection({ scope, index })
+    },
+    [cancelHoverClear],
+  )
+
+  const clearHoverSelection = React.useCallback((scope: SelectionTarget['scope'], index: number) => {
+    cancelHoverClear()
+    hoverClearRef.current = window.setTimeout(() => {
+      setHoverSelection(prev => (prev && prev.scope === scope && prev.index === index ? null : prev))
+      hoverClearRef.current = null
+    }, 120)
+  }, [cancelHoverClear])
 
   const handleBackgroundMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement
@@ -603,8 +666,9 @@ export default function Battle() {
   React.useEffect(
     () => () => {
       if (fastForwardRef.current) window.clearTimeout(fastForwardRef.current)
+      cancelHoverClear()
     },
-    [],
+    [cancelHoverClear],
   )
 
   const handleBackToShop = React.useCallback(() => {
@@ -620,9 +684,9 @@ export default function Battle() {
   const handleResetBattle = React.useCallback(() => {
     if (fastForwardRef.current) window.clearTimeout(fastForwardRef.current)
     setFastForward(false)
-    setSelection(null)
+    clearSelection()
     dispatch({ type: 'RESET', state: buildInitialBattleState(tray, kids, opponentTray, opponentKids, opponent) })
-  }, [kids, opponent, opponentKids, opponentTray, tray])
+  }, [kids, opponent, opponentKids, opponentTray, tray, clearSelection])
 
   const playerActiveSlot = battleState.player.done ? null : battleState.player.slotCursor
   const opponentActiveSlot = battleState.opponent.done ? null : battleState.opponent.slotCursor
@@ -706,11 +770,29 @@ export default function Battle() {
               consumedTrayFlags={battleState.opponent.consumed}
               activeTraySlot={opponentActiveSlot}
               onTraySelect={idx => toggleSelection('opponent-tray', idx)}
-              renderTrayPopover={item => <CardPopover item={item} onClose={clearSelection} />}
+               onTrayHover={idx => handleHoverSelection('opponent-tray', idx)}
+               onTrayHoverEnd={idx => clearHoverSelection('opponent-tray', idx)}
+              renderTrayPopover={(item, idx) => (
+                <CardPopover
+                  item={item}
+                  onClose={clearSelection}
+                  onHoverStart={() => handleHoverSelection('opponent-tray', idx)}
+                  onHoverEnd={() => clearHoverSelection('opponent-tray', idx)}
+                />
+              )}
               selectedKidIndex={selection?.scope === 'opponent-kid' ? selection.index : null}
               activeKidIndex={opponentActiveKid}
               onKidSelect={idx => toggleSelection('opponent-kid', idx)}
-              renderKidPopover={kid => <CardPopover item={kid} onClose={clearSelection} />}
+              onKidHover={idx => handleHoverSelection('opponent-kid', idx)}
+              onKidHoverEnd={idx => clearHoverSelection('opponent-kid', idx)}
+              renderKidPopover={(kid, idx) => (
+                <CardPopover
+                  item={kid}
+                  onClose={clearSelection}
+                  onHoverStart={() => handleHoverSelection('opponent-kid', idx)}
+                  onHoverEnd={() => clearHoverSelection('opponent-kid', idx)}
+                />
+              )}
             />
           ) : (
             <div style={{ textAlign: 'center', color: 'var(--muted)' }}>
@@ -727,11 +809,29 @@ export default function Battle() {
             consumedTrayFlags={battleState.player.consumed}
             activeTraySlot={playerActiveSlot}
             onTraySelect={idx => toggleSelection('player-tray', idx)}
-            renderTrayPopover={item => <CardPopover item={item} onClose={clearSelection} />}
+            onTrayHover={idx => handleHoverSelection('player-tray', idx)}
+            onTrayHoverEnd={idx => clearHoverSelection('player-tray', idx)}
+            renderTrayPopover={(item, idx) => (
+              <CardPopover
+                item={item}
+                onClose={clearSelection}
+                onHoverStart={() => handleHoverSelection('player-tray', idx)}
+                onHoverEnd={() => clearHoverSelection('player-tray', idx)}
+              />
+            )}
             selectedKidIndex={selection?.scope === 'player-kid' ? selection.index : null}
             activeKidIndex={playerActiveKid}
             onKidSelect={idx => toggleSelection('player-kid', idx)}
-            renderKidPopover={kid => <CardPopover item={kid} onClose={clearSelection} />}
+            onKidHover={idx => handleHoverSelection('player-kid', idx)}
+            onKidHoverEnd={idx => clearHoverSelection('player-kid', idx)}
+            renderKidPopover={(kid, idx) => (
+              <CardPopover
+                item={kid}
+                onClose={clearSelection}
+                onHoverStart={() => handleHoverSelection('player-kid', idx)}
+                onHoverEnd={() => clearHoverSelection('player-kid', idx)}
+              />
+            )}
           />
         </div>
       </div>

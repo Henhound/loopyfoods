@@ -106,6 +106,8 @@ function DraggableCard({
   selected,
   disabled,
   onClick,
+  onHover,
+  onHoverEnd,
 }: {
   id: string
   card: PlaceholderCard
@@ -114,6 +116,8 @@ function DraggableCard({
   selected?: boolean
   disabled?: boolean
   onClick?: () => void
+  onHover?: () => void
+  onHoverEnd?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
@@ -135,7 +139,6 @@ function DraggableCard({
     touchAction: 'none',
     cursor: disabled ? 'not-allowed' : 'grab',
     opacity: hide ? 0 : disabled ? 0.55 : 1,
-    pointerEvents: disabled ? 'none' : undefined,
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     outline: selected ? '2px solid var(--accent)' : undefined,
     outlineOffset: selected ? -2 : undefined,
@@ -162,6 +165,8 @@ function DraggableCard({
       aria-disabled={disabled || undefined}
       aria-pressed={selected ? true : undefined}
       onClick={disabled ? undefined : onClick}
+      onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
       data-selectable="true"
       data-drag-id={id}
     >
@@ -203,12 +208,16 @@ function TrayItem({
   hide,
   selected,
   onClick,
+  onHover,
+  onHoverEnd,
 }: {
   index: number
   card: PlaceholderCard
   hide?: boolean
   selected?: boolean
   onClick?: () => void
+  onHover?: () => void
+  onHoverEnd?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `tray-item-${index}`,
@@ -254,6 +263,8 @@ function TrayItem({
       aria-label={card.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
+      onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
       data-selectable="true"
       data-drag-id={`tray-item-${index}`}
     >
@@ -271,6 +282,8 @@ function DraggableKid({
   hide,
   selected,
   onClick,
+  onHover,
+  onHoverEnd,
 }: {
   id: string
   kid: PlaceholderKid
@@ -278,6 +291,8 @@ function DraggableKid({
   hide?: boolean
   selected?: boolean
   onClick?: () => void
+  onHover?: () => void
+  onHoverEnd?: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id,
@@ -310,6 +325,8 @@ function DraggableKid({
       aria-label={kid.title}
       aria-pressed={selected ? true : undefined}
       onClick={onClick}
+      onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
       data-selectable="true"
       data-drag-id={id}
     >
@@ -347,12 +364,16 @@ function KidOptionToken({
   selected,
   locked,
   onClick,
+  onHover,
+  onHoverEnd,
 }: {
   kid: PlaceholderKid
   index: number
   selected: boolean
   locked: boolean
   onClick: () => void
+  onHover?: () => void
+  onHoverEnd?: () => void
 }) {
   const id = `kid-option-${index}`
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -379,6 +400,8 @@ function KidOptionToken({
       className={`kidOptionToken ${selected ? 'isSelected' : ''} ${locked ? 'isLocked' : ''}`}
       data-selectable="true"
       onClick={locked ? undefined : onClick}
+      onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
     >
       <div
         ref={setNodeRef}
@@ -464,6 +487,54 @@ export default function Shop() {
     setSelectedKidIndex(sel?.type === 'kid' ? sel.index : null)
   }, [])
 
+  const [hoverSelection, setHoverSelection] = React.useState<Selection>(null)
+  const hoverClearRef = React.useRef<number | null>(null)
+
+  const cancelHoverClear = React.useCallback(() => {
+    if (hoverClearRef.current) {
+      window.clearTimeout(hoverClearRef.current)
+      hoverClearRef.current = null
+    }
+  }, [])
+
+  const setPinnedSelection = React.useCallback(
+    (sel: Selection) => {
+      cancelHoverClear()
+      setSelection(sel)
+      setHoverSelection(null)
+    },
+    [cancelHoverClear, setSelection],
+  )
+
+  const handleHoverSelection = React.useCallback(
+    (sel: Selection) => {
+      cancelHoverClear()
+      setHoverSelection(sel)
+    },
+    [cancelHoverClear],
+  )
+
+  const clearHoverSelection = React.useCallback(
+    (sel?: Selection) => {
+      cancelHoverClear()
+      hoverClearRef.current = window.setTimeout(() => {
+        setHoverSelection(prev => {
+          if (!prev) return null
+          if (!sel) return null
+          return prev.type === sel.type && prev.index === sel.index ? null : prev
+        })
+        hoverClearRef.current = null
+      }, 120)
+    },
+    [cancelHoverClear],
+  )
+
+  const displayShopIndex = hoverSelection?.type === 'shop' ? hoverSelection.index : selectedShopIndex
+  const displayTrayIndex = hoverSelection?.type === 'tray' ? hoverSelection.index : selectedTrayIndex
+  const displayKidOptionIndex =
+    hoverSelection?.type === 'kid-option' ? hoverSelection.index : selectedKidOptionIndex
+  const displayKidIndex = hoverSelection?.type === 'kid' ? hoverSelection.index : selectedKidIndex
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const resetActive = () => {
@@ -480,6 +551,8 @@ export default function Shop() {
     setSelectedTrayIndex(null)
     setSelectedKidOptionIndex(null)
     setSelectedKidIndex(null)
+    cancelHoverClear()
+    setHoverSelection(null)
 
     const data = e.active.data.current as DragData | undefined
     if (data?.kind === 'food' && data.card) setActiveCard(data.card)
@@ -630,6 +703,8 @@ export default function Shop() {
     const target = e.target as HTMLElement
     // Ignore clicks on selectable items, their popovers, or bottom controls
     if (target.closest('[data-selectable="true"], .cardPopover, .bottomBar, .pickKidContent, button')) return
+    cancelHoverClear()
+    setHoverSelection(null)
     setSelection(null)
   }
 
@@ -671,6 +746,13 @@ export default function Shop() {
     setHasDraftedKidThisRound(false)
     navigate(SCREENS.BATTLE, { tray, kids, opponent, round, health, trophies })
   }
+
+  React.useEffect(
+    () => () => {
+      cancelHoverClear()
+    },
+    [cancelHoverClear],
+  )
 
   return (
     <DndContext
@@ -717,13 +799,20 @@ export default function Shop() {
                     kid={kid}
                     source={{ type: 'kid', index: i }}
                     hide={activeId === `kid-item-${i}`}
-                    selected={selectedKidIndex === i}
+                    selected={displayKidIndex === i}
                     onClick={() =>
-                      setSelection(selectedKidIndex === i ? null : { type: 'kid', index: i })
+                      setPinnedSelection(selectedKidIndex === i ? null : { type: 'kid', index: i })
                     }
+                    onHover={() => handleHoverSelection({ type: 'kid', index: i })}
+                    onHoverEnd={() => clearHoverSelection({ type: 'kid', index: i })}
                   />
-                  {selectedKidIndex === i ? (
-                    <CardPopover item={kid} onClose={() => setSelectedKidIndex(null)} />
+                  {displayKidIndex === i ? (
+                    <CardPopover
+                      item={kid}
+                      onClose={() => setSelectedKidIndex(null)}
+                      onHoverStart={() => handleHoverSelection({ type: 'kid', index: i })}
+                      onHoverEnd={() => clearHoverSelection({ type: 'kid', index: i })}
+                    />
                   ) : null}
                 </div>
               </LunchLineSlot>
@@ -754,15 +843,22 @@ export default function Shop() {
                                 index={idx}
                                 card={item}
                                 hide={activeId === `tray-item-${idx}`}
-                                selected={selectedTrayIndex === i}
+                                selected={displayTrayIndex === i}
                                 onClick={() =>
-                                  setSelection(
+                                  setPinnedSelection(
                                     selectedTrayIndex === i ? null : { type: 'tray', index: i },
                                   )
                                 }
+                                onHover={() => handleHoverSelection({ type: 'tray', index: i })}
+                                onHoverEnd={() => clearHoverSelection({ type: 'tray', index: i })}
                               />
-                              {selectedTrayIndex === i ? (
-                                <CardPopover item={item} onClose={() => setSelectedTrayIndex(null)} />
+                              {displayTrayIndex === i ? (
+                                <CardPopover
+                                  item={item}
+                                  onClose={() => setSelectedTrayIndex(null)}
+                                  onHoverStart={() => handleHoverSelection({ type: 'tray', index: i })}
+                                  onHoverEnd={() => clearHoverSelection({ type: 'tray', index: i })}
+                                />
                               ) : null}
                             </div>
                           )}
@@ -783,7 +879,7 @@ export default function Shop() {
               <div className="pickKidContent">
                 <div className="kidOptionsRow">
                   {kidOptions.map((kid, i) => {
-                    const selected = selectedKidOptionIndex === i
+                    const selected = displayKidOptionIndex === i
                     const locked = hasDraftedKidThisRound
                     return (
                       <div key={`kid-option-${i}`} className="kidOptionWrap">
@@ -793,11 +889,18 @@ export default function Shop() {
                           selected={selected}
                           locked={locked}
                           onClick={() =>
-                            setSelection(selected ? null : { type: 'kid-option', index: i })
+                            setPinnedSelection(selectedKidOptionIndex === i ? null : { type: 'kid-option', index: i })
                           }
+                          onHover={() => handleHoverSelection({ type: 'kid-option', index: i })}
+                          onHoverEnd={() => clearHoverSelection({ type: 'kid-option', index: i })}
                         />
                         {selected ? (
-                          <CardPopover item={kid} onClose={() => setSelectedKidOptionIndex(null)} />
+                          <CardPopover
+                            item={kid}
+                            onClose={() => setSelectedKidOptionIndex(null)}
+                            onHoverStart={() => handleHoverSelection({ type: 'kid-option', index: i })}
+                            onHoverEnd={() => clearHoverSelection({ type: 'kid-option', index: i })}
+                          />
                         ) : null}
                       </div>
                     )
@@ -821,7 +924,7 @@ export default function Shop() {
               <div className="shopRow">
                 {shopItems.map((card, i) => {
                   const id = `shop-${i}`
-                  const selected = selectedShopIndex === i
+                  const selected = displayShopIndex === i
                   return (
                     <div key={id} className="shopCardWrap">
                         <DraggableCard
@@ -831,10 +934,17 @@ export default function Shop() {
                           hide={activeId === id}
                           selected={selected}
                           disabled={!hasPickedKid}
-                          onClick={() => setSelection(selected ? null : { type: 'shop', index: i })}
+                          onClick={() => setPinnedSelection(selectedShopIndex === i ? null : { type: 'shop', index: i })}
+                          onHover={() => handleHoverSelection({ type: 'shop', index: i })}
+                          onHoverEnd={() => clearHoverSelection({ type: 'shop', index: i })}
                         />
                         {selected ? (
-                          <CardPopover item={card} onClose={() => setSelectedShopIndex(null)} />
+                          <CardPopover
+                            item={card}
+                            onClose={() => setSelectedShopIndex(null)}
+                            onHoverStart={() => handleHoverSelection({ type: 'shop', index: i })}
+                            onHoverEnd={() => clearHoverSelection({ type: 'shop', index: i })}
+                          />
                         ) : null}
                     </div>
                   )

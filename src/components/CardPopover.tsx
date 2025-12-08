@@ -9,7 +9,17 @@ export type CardPopoverItem = {
   baseStarValue?: number
 }
 
-export function CardPopover({ item, onClose }: { item: CardPopoverItem; onClose: () => void }) {
+export function CardPopover({
+  item,
+  onClose,
+  onHoverStart,
+  onHoverEnd,
+}: {
+  item: CardPopoverItem
+  onClose: () => void
+  onHoverStart?: () => void
+  onHoverEnd?: () => void
+}) {
   const ref = React.useRef<HTMLDivElement | null>(null)
 
   React.useLayoutEffect(() => {
@@ -91,7 +101,14 @@ export function CardPopover({ item, onClose }: { item: CardPopoverItem; onClose:
       : [typeText, baseStarText].filter(Boolean)
 
   return (
-    <div ref={ref} className="cardPopover" role="dialog" aria-label={`${item.title} details`}>
+    <div
+      ref={ref}
+      className="cardPopover"
+      role="dialog"
+      aria-label={`${item.title} details`}
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
+    >
       <div className="cardPopoverHeader">
         <strong className="cardTitle">{item.title}</strong>
         <button className="popoverClose" aria-label="Close" onClick={onClose}>
@@ -108,4 +125,3 @@ export function CardPopover({ item, onClose }: { item: CardPopoverItem; onClose:
     </div>
   )
 }
-
