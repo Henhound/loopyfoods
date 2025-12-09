@@ -56,6 +56,12 @@ function rollShopItems(trayItems: Array<PlaceholderCard | null>, count: number):
   return pickRandomUnique(available, count)
 }
 
+function rollKidOptions(existingKids: PlaceholderKid[], count: number): PlaceholderKid[] {
+  const takenTitles = new Set(existingKids.map(k => k.title))
+  const available = PLACEHOLDER_KIDS.filter(kid => !takenTitles.has(kid.title))
+  return pickRandomUnique(available, count)
+}
+
 function TraySlot({
   index,
   children,
@@ -453,7 +459,7 @@ export default function Shop() {
   const [shopItems, setShopItems] = React.useState<PlaceholderCard[]>(() => rollShopItems(initialTray, 5))
   const [kids, setKids] = React.useState<PlaceholderKid[]>(initialKids)
   const [kidOptions, setKidOptions] = React.useState<PlaceholderKid[]>(() =>
-    pickRandomUnique(PLACEHOLDER_KIDS, 3),
+    rollKidOptions(initialKids, 3),
   )
   const [hasDraftedKidThisRound, setHasDraftedKidThisRound] = React.useState(false)
   const [round, setRound] = React.useState(initialRound)
@@ -742,7 +748,7 @@ export default function Shop() {
     })
     const opponent = getRandomOpponentSnapshot(round, saved.id)
     setRound(r => r + 1)
-    setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
+    setKidOptions(() => rollKidOptions(kids, 3))
     setSelectedKidOptionIndex(null)
     setHasDraftedKidThisRound(false)
     navigate(SCREENS.BATTLE, { tray, kids, opponent, round, health, trophies })
@@ -977,7 +983,7 @@ export default function Shop() {
                 setShopItems(() => rollShopItems(tray, 5))
                 if (!hasDraftedKidThisRound) {
                   setSelectedKidOptionIndex(null)
-                  setKidOptions(() => pickRandomUnique(PLACEHOLDER_KIDS, 3))
+                  setKidOptions(() => rollKidOptions(kids, 3))
                 }
               }}
             >

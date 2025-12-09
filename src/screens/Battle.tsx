@@ -706,7 +706,7 @@ export default function Battle() {
 
   return (
     <div
-      className="battleScreen"
+      className={`battleScreen${showLog ? ' battleScreenLogOpen' : ''}`}
       style={{
         height: '100%',
         maxHeight: '100%',

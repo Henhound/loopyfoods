@@ -571,6 +571,12 @@
   flex-direction: column;
   gap: var(--gap);
 }
+.battleScreenLogOpen {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
 .battleScreen .panelStack {
   flex: 0 0 auto;
   min-height: auto;
