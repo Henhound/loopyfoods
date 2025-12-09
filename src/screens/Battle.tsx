@@ -460,18 +460,18 @@ function OpponentSummary({
               snapshot.kids.map((kid, i) => (
                 <div
                   key={`opp-kid-${kid.title}-${i}`}
-                  className="kidChip"
+                  className="battleKidCard"
                   data-active={activeKidIndex === i ? 'true' : undefined}
                   role={onKidSelect ? 'button' : undefined}
                   data-selectable={onKidSelect ? 'true' : undefined}
+                  aria-label={kid.title}
                   aria-pressed={selectedKidIndex === i ? true : undefined}
                   onClick={onKidSelect ? () => onKidSelect(i) : undefined}
                   style={{ cursor: onKidSelect ? 'pointer' : 'default' }}
                   onMouseEnter={onKidHover ? () => onKidHover(i) : undefined}
                   onMouseLeave={onKidHoverEnd ? () => onKidHoverEnd(i) : undefined}
                 >
-                  <img className="kidChipImg" src={kid.image} alt={kid.title} />
-                  <span className="kidName">{kid.title}</span>
+                  <img className="kidSprite" src={kid.image} alt={kid.title} />
                   <FoodTypeBadge type={kid.foodType} />
                   {selectedKidIndex === i && renderKidPopover ? renderKidPopover(kid, i) : null}
                 </div>
@@ -529,18 +529,18 @@ function PlayerBoard({
               kids.map((kid, i) => (
                 <div
                   key={`battle-kid-${i}`}
-                  className="kidChip"
+                  className="battleKidCard"
                   data-active={activeKidIndex === i ? 'true' : undefined}
                   role={onKidSelect ? 'button' : undefined}
                   data-selectable={onKidSelect ? 'true' : undefined}
+                  aria-label={kid.title}
                   aria-pressed={selectedKidIndex === i ? true : undefined}
                   onClick={onKidSelect ? () => onKidSelect(i) : undefined}
                   style={{ cursor: onKidSelect ? 'pointer' : 'default' }}
                   onMouseEnter={onKidHover ? () => onKidHover(i) : undefined}
                   onMouseLeave={onKidHoverEnd ? () => onKidHoverEnd(i) : undefined}
                 >
-                  <img className="kidChipImg" src={kid.image} alt={kid.title} />
-                  <span className="kidName">{kid.title}</span>
+                  <img className="kidSprite" src={kid.image} alt={kid.title} />
                   <FoodTypeBadge type={kid.foodType} />
                   {selectedKidIndex === i && renderKidPopover ? renderKidPopover(kid, i) : null}
                 </div>
@@ -580,7 +580,7 @@ export default function Battle() {
 
   const [battleState, dispatch] = React.useReducer(reduceBattle, initialBattleState)
   const [fastForward, setFastForward] = React.useState(false)
-  const [showLog, setShowLog] = React.useState(true)
+  const [showLog, setShowLog] = React.useState(false)
   const fastForwardRef = React.useRef<number | null>(null)
   const hoverClearRef = React.useRef<number | null>(null)
 
@@ -848,6 +848,13 @@ export default function Battle() {
         </div>
       </div>
 
+
+      <div className="battleFooter">
+        <button className="btn cta fullWidth" onClick={handleBackToShop} disabled={!battleState.ended}>
+          Back to the shop
+        </button>
+      </div>
+
       {showLog ? (
         <div className="panelBox battleLogBox">
           <div className="battleLogHeader">
@@ -882,14 +889,6 @@ export default function Battle() {
               </ul>
             )}
           </div>
-        </div>
-      ) : null}
-
-      {battleState.ended ? (
-        <div className="battleFooter">
-          <button className="btn cta fullWidth" onClick={handleBackToShop}>
-            Back to the shop
-          </button>
         </div>
       ) : null}
     </div>
