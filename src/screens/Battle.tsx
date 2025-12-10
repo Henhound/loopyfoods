@@ -79,22 +79,34 @@ type TeamRuntimeState = {
   kids: PlaceholderKid[]
   consumed: boolean[]
   kidIndex: number
-  slotCursor: number
+  slotCursor: number | null
+  kidDone: boolean
   done: boolean
 }
 
 type Bite = { kidIndex: number; slotIndex: number; food: PlaceholderCard }
 
-type BattleLogEntry = {
-  id: number
-  team: 'player' | 'opponent'
-  kidTitle: string
-  foodTitle: string
-  stars: number
-  slotIndex: number
-  kidIndex: number
-  step: number
-}
+type BattleLogEntry =
+  | {
+      id: number
+      kind: 'bite'
+      team: 'player' | 'opponent'
+      kidTitle: string
+      foodTitle: string
+      stars: number
+      slotIndex: number
+      kidIndex: number
+      step: number
+    }
+  | {
+      id: number
+      kind: 'wait'
+      waitingTeam: 'player' | 'opponent'
+      waitingKidTitle: string
+      otherKidTitle: string
+      kidIndex: number
+      step: number
+    }
 
 type LastAction = { team: 'player' | 'opponent'; slotIndex: number; kidIndex: number; step: number }
 
@@ -116,66 +128,87 @@ type SelectionTarget = {
   index: number
 }
 
-function alignTeamState(
-  state: TeamRuntimeState,
-  startKidIndex = state.kidIndex,
-  startSlotCursor = state.slotCursor,
-): TeamRuntimeState {
-  let kidIndex = startKidIndex
-  let slotCursor = startSlotCursor
-  let consumed = state.consumed
-
-  while (kidIndex < state.kids.length) {
-    const kid = state.kids[kidIndex]
-    for (let s = slotCursor; s < state.tray.length; s++) {
-      const food = state.tray[s]
-      if (food && !consumed[s] && food.foodType === kid.foodType) {
-        return { ...state, consumed, kidIndex, slotCursor: s, done: false }
-      }
-    }
-    kidIndex += 1
-    slotCursor = 0
-    consumed = Array.from({ length: state.tray.length }, () => false)
-  }
-
-  return { ...state, consumed, kidIndex, slotCursor: 0, done: true }
+function resetConsumed(size: number): boolean[] {
+  return Array.from({ length: size }, () => false)
 }
 
-function createTeamState(tray: Array<PlaceholderCard | null>, kids: PlaceholderKid[]): TeamRuntimeState {
-  const base: TeamRuntimeState = {
-    tray,
-    kids,
-    consumed: Array.from({ length: tray.length }, () => false),
-    kidIndex: 0,
-    slotCursor: 0,
-    done: kids.length === 0 || tray.length === 0,
-  }
-  return alignTeamState(base, 0, 0)
-}
-
-function findNextBite(state: TeamRuntimeState): Bite | null {
+function findNextSlotCursor(state: TeamRuntimeState): number | null {
   if (state.done) return null
   const kid = state.kids[state.kidIndex]
   if (!kid) return null
-  for (let s = state.slotCursor; s < state.tray.length; s++) {
+  for (let s = 0; s < state.tray.length; s++) {
     const food = state.tray[s]
     if (food && !state.consumed[s] && food.foodType === kid.foodType) {
-      return { kidIndex: state.kidIndex, slotIndex: s, food }
+      return s
     }
   }
-  // If cursor passed any remaining match, align will mark done on next step
   return null
+}
+
+function createTeamState(tray: Array<PlaceholderCard | null>, kids: PlaceholderKid[]): TeamRuntimeState {
+  const consumed = resetConsumed(tray.length)
+  const base: TeamRuntimeState = {
+    tray,
+    kids,
+    consumed,
+    kidIndex: 0,
+    slotCursor: null,
+    kidDone: false,
+    done: kids.length === 0 || tray.length === 0,
+  }
+  const slotCursor = base.done ? null : findNextSlotCursor(base)
+  return {
+    ...base,
+    slotCursor,
+    kidDone: base.done ? true : slotCursor === null,
+  }
+}
+
+function findNextBite(state: TeamRuntimeState): Bite | null {
+  if (state.done || state.kidDone) return null
+  const slotIndex = state.slotCursor ?? findNextSlotCursor(state)
+  if (slotIndex == null) return null
+  const food = state.tray[slotIndex]
+  if (!food) return null
+  return { kidIndex: state.kidIndex, slotIndex, food }
 }
 
 function applyBite(state: TeamRuntimeState, bite: Bite): TeamRuntimeState {
   const consumed = [...state.consumed]
   consumed[bite.slotIndex] = true
-  const next = alignTeamState(
-    { ...state, consumed },
-    bite.kidIndex,
-    bite.slotIndex + 1,
-  )
-  return next
+  const slotCursor = findNextSlotCursor({ ...state, consumed })
+  return { ...state, consumed, slotCursor, kidDone: slotCursor == null }
+}
+
+function markKidDone(state: TeamRuntimeState): TeamRuntimeState {
+  if (state.done || state.kidDone) return state
+  return { ...state, kidDone: true, slotCursor: null }
+}
+
+function advanceKid(state: TeamRuntimeState): TeamRuntimeState {
+  if (state.done) return state
+  const nextKidIndex = state.kidIndex + 1
+  const consumed = resetConsumed(state.tray.length)
+  const done = nextKidIndex >= state.kids.length || state.tray.length === 0
+  if (done) {
+    return { ...state, kidIndex: nextKidIndex, consumed, slotCursor: null, kidDone: true, done: true }
+  }
+  const slotCursor = findNextSlotCursor({
+    ...state,
+    kidIndex: nextKidIndex,
+    consumed,
+    slotCursor: null,
+    kidDone: false,
+    done: false,
+  })
+  return {
+    ...state,
+    kidIndex: nextKidIndex,
+    consumed,
+    slotCursor,
+    kidDone: slotCursor == null,
+    done: false,
+  }
 }
 
 function computeWinner(playerStars: number, opponentStars: number): 'player' | 'opponent' | 'tie' {
@@ -216,25 +249,10 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
     case 'STEP': {
       if (state.ended) return state
 
-      const playerBite = findNextBite(state.player)
-      const opponentBite = findNextBite(state.opponent)
-
-      if (!playerBite && !opponentBite) {
-        const playerDone = true
-        const opponentDone = true
-        const ended = playerDone && opponentDone
-        const winner = ended ? computeWinner(state.playerStars, state.opponentStars) : state.winner
-        return {
-          ...state,
-          player: { ...state.player, done: playerDone },
-          opponent: { ...state.opponent, done: opponentDone },
-          ended,
-          winner,
-        }
-      }
-
       let playerState = state.player
       let opponentState = state.opponent
+      const playerStartedKidDone = playerState.kidDone || playerState.done
+      const opponentStartedKidDone = opponentState.kidDone || opponentState.done
       let playerStars = state.playerStars
       let opponentStars = state.opponentStars
       const step = state.step + 1
@@ -242,11 +260,15 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
       let logId = state.log.length + 1
       let lastAction: LastAction | null = null
 
+      const playerBite = findNextBite(playerState)
+      const opponentBite = findNextBite(opponentState)
+
       if (playerBite) {
         playerState = applyBite(playerState, playerBite)
         playerStars += playerBite.food.baseStarValue
         logEntries.push({
           id: logId,
+          kind: 'bite',
           step,
           team: 'player',
           kidTitle: state.player.kids[playerBite.kidIndex]?.title ?? 'Kid',
@@ -257,8 +279,6 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
         })
         logId += 1
         lastAction = { team: 'player', slotIndex: playerBite.slotIndex, kidIndex: playerBite.kidIndex, step }
-      } else {
-        playerState = { ...playerState, done: true }
       }
 
       if (opponentBite) {
@@ -266,6 +286,7 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
         opponentStars += opponentBite.food.baseStarValue
         logEntries.push({
           id: logId,
+          kind: 'bite',
           step,
           team: 'opponent',
           kidTitle: state.opponent.kids[opponentBite.kidIndex]?.title ?? 'Kid',
@@ -275,8 +296,54 @@ function reduceBattle(state: BattleState, action: BattleAction): BattleState {
           kidIndex: opponentBite.kidIndex,
         })
         lastAction = { team: 'opponent', slotIndex: opponentBite.slotIndex, kidIndex: opponentBite.kidIndex, step }
-      } else {
-        opponentState = { ...opponentState, done: true }
+      }
+
+      if (!playerBite) {
+        playerState = markKidDone(playerState)
+      }
+      if (!opponentBite) {
+        opponentState = markKidDone(opponentState)
+      }
+
+      const playerKidDone = playerState.kidDone || playerState.done
+      const opponentKidDone = opponentState.kidDone || opponentState.done
+
+      if (playerKidDone && !opponentKidDone && !opponentState.done && !playerStartedKidDone) {
+        logEntries.push({
+          id: logId,
+          kind: 'wait',
+          step,
+          waitingTeam: 'player',
+          waitingKidTitle: playerState.kids[playerState.kidIndex]?.title ?? 'Kid',
+          otherKidTitle: opponentState.kids[opponentState.kidIndex]?.title ?? 'Kid',
+          kidIndex: playerState.kidIndex,
+        })
+        logId += 1
+      } else if (opponentKidDone && !playerKidDone && !playerState.done && !opponentStartedKidDone) {
+        logEntries.push({
+          id: logId,
+          kind: 'wait',
+          step,
+          waitingTeam: 'opponent',
+          waitingKidTitle: opponentState.kids[opponentState.kidIndex]?.title ?? 'Kid',
+          otherKidTitle: playerState.kids[playerState.kidIndex]?.title ?? 'Kid',
+          kidIndex: opponentState.kidIndex,
+        })
+        logId += 1
+      }
+
+      const readyToAdvance =
+        playerKidDone &&
+        opponentKidDone &&
+        (!playerState.done || !opponentState.done)
+
+      if (readyToAdvance) {
+        if (!playerState.done) {
+          playerState = advanceKid(playerState)
+        }
+        if (!opponentState.done) {
+          opponentState = advanceKid(opponentState)
+        }
       }
 
       const playerDone = playerState.done
@@ -450,7 +517,6 @@ function OpponentSummary({
           renderPopover={renderTrayPopover}
         />
         <div className="battleOpponentLunchLine">
-          <div className="sectionLabel small">Lunch Line</div>
           <div className="lunchLineRow">
             {snapshot.kids.length === 0 ? (
               <div className="emptyLunchLine" role="status">
@@ -519,7 +585,6 @@ function PlayerBoard({
           renderPopover={renderTrayPopover}
         />
         <div className="battleOpponentLunchLine">
-          <div className="sectionLabel small">Lunch Line</div>
           <div className="lunchLineRow">
             {kids.length === 0 ? (
               <div className="emptyLunchLine" role="status">
@@ -690,8 +755,10 @@ export default function Battle() {
     dispatch({ type: 'RESET', state: buildInitialBattleState(tray, kids, opponentTray, opponentKids, opponent) })
   }, [kids, opponent, opponentKids, opponentTray, tray, clearSelection])
 
-  const playerActiveSlot = battleState.player.done ? null : battleState.player.slotCursor
-  const opponentActiveSlot = battleState.opponent.done ? null : battleState.opponent.slotCursor
+  const playerActiveSlot =
+    battleState.player.done || battleState.player.kidDone ? null : battleState.player.slotCursor
+  const opponentActiveSlot =
+    battleState.opponent.done || battleState.opponent.kidDone ? null : battleState.opponent.slotCursor
   const playerActiveKid = battleState.player.done ? null : battleState.player.kidIndex
   const opponentActiveKid = battleState.opponent.done ? null : battleState.opponent.kidIndex
 
@@ -782,8 +849,8 @@ export default function Battle() {
               consumedTrayFlags={battleState.opponent.consumed}
               activeTraySlot={opponentActiveSlot}
               onTraySelect={idx => toggleSelection('opponent-tray', idx)}
-               onTrayHover={idx => handleHoverSelection('opponent-tray', idx)}
-               onTrayHoverEnd={idx => clearHoverSelection('opponent-tray', idx)}
+              onTrayHover={idx => handleHoverSelection('opponent-tray', idx)}
+              onTrayHoverEnd={idx => clearHoverSelection('opponent-tray', idx)}
               renderTrayPopover={(item, idx) => (
                 <CardPopover
                   item={item}
@@ -877,15 +944,32 @@ export default function Battle() {
                 {battleState.log
                   .slice()
                   .reverse()
-                  .map(entry => (
-                    <li key={entry.id} className={`logItem ${entry.team === 'player' ? 'logPlayer' : 'logOpponent'}`}>
-                      <span className="logStep">#{entry.step}</span>
-                      <span className="logTeam">{entry.team === 'player' ? 'You' : 'Opponent'}</span>
-                      <span className="logText">
-                        {entry.kidTitle} ate {entry.foodTitle} (+{entry.stars}⭐)
-                      </span>
-                    </li>
-                  ))}
+                  .map(entry => {
+                    if (entry.kind === 'wait') {
+                      const teamClass = entry.waitingTeam === 'player' ? 'logPlayer' : 'logOpponent'
+                      const teamLabel = entry.waitingTeam === 'player' ? 'You' : 'Opponent'
+                      return (
+                        <li key={entry.id} className={`logItem ${teamClass}`}>
+                          <span className="logStep">#{entry.step}</span>
+                          <span className="logTeam">{teamLabel}</span>
+                          <span className="logText">
+                            {`${entry.waitingKidTitle} is waiting for ${entry.otherKidTitle} to finish their tray`}
+                          </span>
+                        </li>
+                      )
+                    }
+                    const teamClass = entry.team === 'player' ? 'logPlayer' : 'logOpponent'
+                    const teamLabel = entry.team === 'player' ? 'You' : 'Opponent'
+                    return (
+                      <li key={entry.id} className={`logItem ${teamClass}`}>
+                        <span className="logStep">#{entry.step}</span>
+                        <span className="logTeam">{teamLabel}</span>
+                        <span className="logText">
+                          {`${entry.kidTitle} ate ${entry.foodTitle} (+${entry.stars} stars)`}
+                        </span>
+                      </li>
+                    )
+                  })}
               </ul>
             )}
           </div>
